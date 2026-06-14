@@ -744,6 +744,23 @@ const ITEM = {
   PICKAXE_STONE: 114,
   PICKAXE_IRON: 115,
   PICKAXE_DIAMOND: 116,
+  // SURPRESAS ESCONDIDAS NOS BLOCOS! 🎁
+  ARROW: 117,
+  KNIFE: 118,
+  DAGGER: 119,
+  RUBY: 120,
+  SAPPHIRE: 121,
+  PEARL: 122,
+  GOLDEN_APPLE: 123,
+  ENCHANTED_BOOK: 124,
+  MAGIC_CRYSTAL: 125,
+  ANCIENT_COIN: 126,
+  MYSTERIOUS_KEY: 127,
+  TREASURE_MAP: 128,
+  LUCKY_CLOVER: 129,
+  RAINBOW_GEM: 130,
+  STAR_FRAGMENT: 131,
+  PHOENIX_FEATHER: 132,
 };
 ITEM_INFO[ITEM.SWORD_WOOD]  = { name: 'Espada de Madeira', icon: '🗡️', stack: 1,  block: null, tool: 'sword', damage: 4 };
 ITEM_INFO[ITEM.RAW_BEEF]    = { name: 'Carne Crua',        icon: '🥩', stack: 16, block: null };
@@ -766,6 +783,23 @@ ITEM_INFO[ITEM.SWORD_DIAMOND] = { name: 'Espada de Diamante', icon: '⚔️', st
 ITEM_INFO[ITEM.PICKAXE_STONE]   = { name: 'Picareta de Pedra',    icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 1.5 };
 ITEM_INFO[ITEM.PICKAXE_IRON]    = { name: 'Picareta de Ferro',    icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 2.0 };
 ITEM_INFO[ITEM.PICKAXE_DIAMOND] = { name: 'Picareta de Diamante', icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 3.0 };
+// SURPRESAS RARAS! 🎁✨
+ITEM_INFO[ITEM.ARROW]           = { name: 'Flecha',            icon: '🏹', stack: 64, block: null };
+ITEM_INFO[ITEM.KNIFE]           = { name: 'Faca',              icon: '🔪', stack: 1,  block: null, tool: 'sword', damage: 5 };
+ITEM_INFO[ITEM.DAGGER]          = { name: 'Adaga',             icon: '🗡️', stack: 1,  block: null, tool: 'sword', damage: 7 };
+ITEM_INFO[ITEM.RUBY]            = { name: 'Rubi',              icon: '🔴', stack: 64, block: null };
+ITEM_INFO[ITEM.SAPPHIRE]        = { name: 'Safira',            icon: '🔵', stack: 64, block: null };
+ITEM_INFO[ITEM.PEARL]           = { name: 'Pérola',            icon: '⚪', stack: 64, block: null };
+ITEM_INFO[ITEM.GOLDEN_APPLE]    = { name: 'Maçã Dourada',      icon: '🍎', stack: 16, block: null, food: 20 }; // CURA MUITO!
+ITEM_INFO[ITEM.ENCHANTED_BOOK]  = { name: 'Livro Encantado',   icon: '📖', stack: 1,  block: null };
+ITEM_INFO[ITEM.MAGIC_CRYSTAL]   = { name: 'Cristal Mágico',    icon: '💠', stack: 16, block: null };
+ITEM_INFO[ITEM.ANCIENT_COIN]    = { name: 'Moeda Antiga',      icon: '🪙', stack: 64, block: null };
+ITEM_INFO[ITEM.MYSTERIOUS_KEY]  = { name: 'Chave Misteriosa',  icon: '🗝️', stack: 1,  block: null };
+ITEM_INFO[ITEM.TREASURE_MAP]    = { name: 'Mapa do Tesouro',   icon: '🗺️', stack: 1,  block: null };
+ITEM_INFO[ITEM.LUCKY_CLOVER]    = { name: 'Trevo da Sorte',    icon: '🍀', stack: 16, block: null };
+ITEM_INFO[ITEM.RAINBOW_GEM]     = { name: 'Gema Arco-Íris',    icon: '🌈', stack: 16, block: null };
+ITEM_INFO[ITEM.STAR_FRAGMENT]   = { name: 'Fragmento Estelar', icon: '⭐', stack: 16, block: null };
+ITEM_INFO[ITEM.PHOENIX_FEATHER] = { name: 'Pena de Fênix',     icon: '🪶', stack: 16, block: null };
 
 // ============================================================
 //  CRAFTING
@@ -1735,9 +1769,24 @@ function trySpawnNearChunk(cx, cz) {
 }
 
 // ============================================================
-//  DINOSSAUROS — montáveis e voadores! Modelo mais realista
+//  DINOSSAUROS — montáveis e voadores! SUPER REALISTAS!
+//  Diferentes espécies: Pterodáctilo, T-Rex, Triceratops, Raptor
 // ============================================================
-function makeDinoMesh() {
+function makeDinoMesh(species = null) {
+  // Escolhe espécie aleatória se não especificada
+  if (!species) {
+    const types = ['pterodactyl', 'trex', 'triceratops', 'raptor'];
+    species = types[Math.floor(Math.random() * types.length)];
+  }
+
+  if (species === 'trex') return makeTRexMesh();
+  if (species === 'triceratops') return makeTriceratopsMesh();
+  if (species === 'raptor') return makeRaptorMesh();
+  return makePterodactylMesh(); // padrão
+}
+
+// PTERODÁCTILO - Voador clássico
+function makePterodactylMesh() {
   const group = new THREE.Group();
 
   // Cores mais realistas - estilo pterodáctilo/dragão
@@ -1861,6 +1910,238 @@ function makeDinoMesh() {
   group.userData.tail1 = tail1;
   group.userData.tail2 = tail2;
 
+  group.userData.species = 'pterodactyl';
+  return group;
+}
+
+// T-REX - Predador gigante e poderoso!
+function makeTRexMesh() {
+  const group = new THREE.Group();
+  const scale = 1.4; // MAIOR que outros dinos
+
+  // Cores T-Rex - verde escuro intimidador
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0x3d5a3d });
+  const bellyMat = new THREE.MeshLambertMaterial({ color: 0x8a9a7a });
+  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x2d4a2d });
+  const clawMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffaa00, emissive: 0xff5500, emissiveIntensity: 0.5 });
+
+  // Corpo MASSIVO
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.6 * scale, 1.3 * scale, 3.2 * scale), skinMat);
+  body.position.y = 2.0 * scale;
+
+  // Barriga
+  const belly = new THREE.Mesh(new THREE.BoxGeometry(1.3 * scale, 0.9 * scale, 2.8 * scale), bellyMat);
+  belly.position.set(0, 1.6 * scale, 0);
+
+  // Pescoço grosso
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.8 * scale, 0.9 * scale, 1.0 * scale), skinMat);
+  neck.position.set(0, 2.4 * scale, 2.0 * scale);
+
+  // Cabeça GIGANTE com mandíbulas poderosas
+  const head = new THREE.Mesh(new THREE.BoxGeometry(1.2 * scale, 1.0 * scale, 1.4 * scale), skinMat);
+  head.position.set(0, 2.7 * scale, 3.0 * scale);
+
+  // Mandíbula inferior grande
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(1.0 * scale, 0.5 * scale, 1.2 * scale), scaleMat);
+  jaw.position.set(0, 2.2 * scale, 3.2 * scale);
+
+  // Dentes afiados!
+  for (let i = 0; i < 6; i++) {
+    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08), clawMat);
+    tooth.position.set(-0.4 + i * 0.15, 2.45 * scale, 3.7 * scale);
+    group.add(tooth);
+  }
+
+  // Olhos grandes e ameaçadores
+  const eyeGeo = new THREE.SphereGeometry(0.15 * scale, 8, 8);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-0.4 * scale, 2.9 * scale, 3.5 * scale);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(0.4 * scale, 2.9 * scale, 3.5 * scale);
+
+  // Braços PEQUENOS característicos do T-Rex
+  const armGeo = new THREE.BoxGeometry(0.2 * scale, 0.6 * scale, 0.2 * scale);
+  const armL = new THREE.Mesh(armGeo, scaleMat);
+  armL.position.set(-0.7 * scale, 1.9 * scale, 1.3 * scale);
+  const armR = new THREE.Mesh(armGeo, scaleMat);
+  armR.position.set(0.7 * scale, 1.9 * scale, 1.3 * scale);
+
+  // Pernas traseiras GIGANTES e musculosas
+  const legGeo = new THREE.BoxGeometry(0.6 * scale, 1.8 * scale, 0.6 * scale);
+  const legs = [];
+  for (const [lx, lz] of [[-0.5, -0.7], [0.5, -0.7]]) {
+    const leg = new THREE.Mesh(legGeo, scaleMat);
+    leg.position.set(lx * scale, 0.9 * scale, lz * scale);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.2 * scale, 0.9 * scale), clawMat);
+    foot.position.set(lx * scale, 0.1 * scale, (lz + 0.2) * scale);
+    legs.push(leg);
+    group.add(leg, foot);
+  }
+
+  // Cauda MASSIVA como contrapeso
+  const tail1 = new THREE.Mesh(new THREE.BoxGeometry(0.8 * scale, 0.8 * scale, 1.8 * scale), skinMat);
+  tail1.position.set(0, 1.8 * scale, -2.5 * scale);
+  const tail2 = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 1.5 * scale), skinMat);
+  tail2.position.set(0, 1.6 * scale, -3.8 * scale);
+
+  // Espinhos dorsais intimidadores
+  for (let i = 0; i < 7; i++) {
+    const spike = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.15), scaleMat);
+    spike.position.set(0, 2.8 * scale, 1.5 * scale - i * 0.7 * scale);
+    spike.rotation.x = -0.2;
+    group.add(spike);
+  }
+
+  group.add(body, belly, neck, head, jaw, eyeL, eyeR, armL, armR, tail1, tail2);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  group.userData.legs = legs;
+  group.userData.head = head;
+  group.userData.jaw = jaw;
+  group.userData.tail1 = tail1;
+  group.userData.tail2 = tail2;
+  group.userData.species = 'trex';
+  return group;
+}
+
+// TRICERATOPS - Herbívoro com chifres!
+function makeTriceratopsMesh() {
+  const group = new THREE.Group();
+  const scale = 1.3;
+
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0x8b7355 });
+  const bellyMat = new THREE.MeshLambertMaterial({ color: 0xc9a97a });
+  const hornMat = new THREE.MeshLambertMaterial({ color: 0xe0d4c8 });
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0x4a3820 });
+
+  // Corpo robusto
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.5 * scale, 1.2 * scale, 3.0 * scale), skinMat);
+  body.position.y = 1.6 * scale;
+
+  // Cabeça grande com PLACA óssea
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.9 * scale, 0.8 * scale, 1.0 * scale), skinMat);
+  head.position.set(0, 1.7 * scale, 2.2 * scale);
+
+  // PLACA CRANIANA gigante (característica do Triceratops!)
+  const frill = new THREE.Mesh(new THREE.BoxGeometry(1.8 * scale, 1.2 * scale, 0.3 * scale), hornMat);
+  frill.position.set(0, 2.2 * scale, 1.5 * scale);
+
+  // TRÊS CHIFRES!
+  const horn1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 0.15), hornMat); // nariz
+  horn1.position.set(0, 1.8 * scale, 2.8 * scale);
+  horn1.rotation.x = 0.5;
+  const horn2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 0.2), hornMat); // esquerda
+  horn2.position.set(-0.4 * scale, 2.1 * scale, 2.5 * scale);
+  horn2.rotation.x = 0.3;
+  const horn3 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.0, 0.2), hornMat); // direita
+  horn3.position.set(0.4 * scale, 2.1 * scale, 2.5 * scale);
+  horn3.rotation.x = 0.3;
+
+  // Olhos
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1 * scale, 8, 8), eyeMat);
+  eyeL.position.set(-0.3 * scale, 1.9 * scale, 2.4 * scale);
+  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.1 * scale, 8, 8), eyeMat);
+  eyeR.position.set(0.3 * scale, 1.9 * scale, 2.4 * scale);
+
+  // Pernas robustas (4 pernas no chão)
+  const legGeo = new THREE.BoxGeometry(0.5 * scale, 1.2 * scale, 0.5 * scale);
+  const legs = [];
+  for (const [lx, lz] of [[-0.6, 1.0], [0.6, 1.0], [-0.6, -1.0], [0.6, -1.0]]) {
+    const leg = new THREE.Mesh(legGeo, skinMat);
+    leg.position.set(lx * scale, 0.6 * scale, lz * scale);
+    legs.push(leg);
+    group.add(leg);
+  }
+
+  // Cauda curta
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.6 * scale, 1.2 * scale), skinMat);
+  tail.position.set(0, 1.3 * scale, -2.0 * scale);
+
+  group.add(body, head, frill, horn1, horn2, horn3, eyeL, eyeR, tail);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  group.userData.legs = legs;
+  group.userData.head = head;
+  group.userData.tail1 = tail;
+  group.userData.species = 'triceratops';
+  return group;
+}
+
+// VELOCIRAPTOR - Ágil e rápido!
+function makeRaptorMesh() {
+  const group = new THREE.Group();
+  const scale = 0.8; // Menor que os outros
+
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0x6b5940 });
+  const stripeMat = new THREE.MeshLambertMaterial({ color: 0x4a3820 });
+  const clawMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffcc00, emissive: 0xff8800, emissiveIntensity: 0.4 });
+
+  // Corpo esguio e ágil
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8 * scale, 0.9 * scale, 1.8 * scale), skinMat);
+  body.position.y = 1.4 * scale;
+
+  // Listras nas costas
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.82 * scale, 0.3 * scale, 1.6 * scale), stripeMat);
+  stripe.position.set(0, 1.75 * scale, 0);
+
+  // Pescoço
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.4 * scale, 0.6 * scale, 0.6 * scale), skinMat);
+  neck.position.set(0, 1.7 * scale, 1.2 * scale);
+
+  // Cabeça alongada e predatória
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.9 * scale), skinMat);
+  head.position.set(0, 1.9 * scale, 1.8 * scale);
+
+  // Mandíbula com dentes
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.4 * scale, 0.25 * scale, 0.7 * scale), stripeMat);
+  jaw.position.set(0, 1.7 * scale, 2.0 * scale);
+
+  // Olhos amarelos brilhantes
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08 * scale, 8, 8), eyeMat);
+  eyeL.position.set(-0.15 * scale, 2.0 * scale, 2.0 * scale);
+  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.08 * scale, 8, 8), eyeMat);
+  eyeR.position.set(0.15 * scale, 2.0 * scale, 2.0 * scale);
+
+  // Pernas traseiras poderosas
+  const legGeo = new THREE.BoxGeometry(0.35 * scale, 1.3 * scale, 0.35 * scale);
+  const legs = [];
+  for (const [lx, lz] of [[-0.3, -0.3], [0.3, -0.3]]) {
+    const leg = new THREE.Mesh(legGeo, skinMat);
+    leg.position.set(lx * scale, 0.65 * scale, lz * scale);
+    // GARRA MORTAL no pé!
+    const claw = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.1), clawMat);
+    claw.position.set(lx * scale, 0.2 * scale, (lz + 0.3) * scale);
+    claw.rotation.x = -0.5;
+    legs.push(leg);
+    group.add(leg, claw);
+  }
+
+  // Braços com garras
+  const armGeo = new THREE.BoxGeometry(0.2 * scale, 0.7 * scale, 0.2 * scale);
+  const armL = new THREE.Mesh(armGeo, skinMat);
+  armL.position.set(-0.4 * scale, 1.5 * scale, 0.8 * scale);
+  const armR = new THREE.Mesh(armGeo, skinMat);
+  armR.position.set(0.4 * scale, 1.5 * scale, 0.8 * scale);
+
+  // Cauda longa para equilíbrio
+  const tail1 = new THREE.Mesh(new THREE.BoxGeometry(0.35 * scale, 0.35 * scale, 1.2 * scale), skinMat);
+  tail1.position.set(0, 1.3 * scale, -1.5 * scale);
+  const tail2 = new THREE.Mesh(new THREE.BoxGeometry(0.25 * scale, 0.25 * scale, 1.0 * scale), skinMat);
+  tail2.position.set(0, 1.2 * scale, -2.5 * scale);
+
+  group.add(body, stripe, neck, head, jaw, eyeL, eyeR, armL, armR, tail1, tail2);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  group.userData.legs = legs;
+  group.userData.head = head;
+  group.userData.jaw = jaw;
+  group.userData.tail1 = tail1;
+  group.userData.tail2 = tail2;
+  group.userData.armL = armL;
+  group.userData.armR = armR;
+  group.userData.species = 'raptor';
   return group;
 }
 
@@ -1874,28 +2155,50 @@ function spawnDino(wx, wz) {
   // Não spawnar em água
   if (h <= WATER_LEVEL) return;
 
-  const mesh = makeDinoMesh();
+  const mesh = makeDinoMesh(); // Cria espécie aleatória
+  const species = mesh.userData.species;
   mesh.position.set(wx + 0.5, h + 1, wz + 0.5);
   scene.add(mesh);
 
+  // Características diferentes por espécie
+  let hp, speed, damage;
+  if (species === 'trex') {
+    hp = 50; speed = 1.2; damage = 8; // Forte mas lento
+  } else if (species === 'triceratops') {
+    hp = 45; speed = 0.9; damage = 6; // Tanque resistente
+  } else if (species === 'raptor') {
+    hp = 25; speed = 1.8; damage = 5; // Rápido mas frágil
+  } else { // pterodactyl
+    hp = 30; speed = 1.4; damage = 4; // Balanceado e voa
+  }
+
   mobs.push({
     type: 'dino',
+    species,
     mesh,
     pos: mesh.position,
     vel: new THREE.Vector3(),
     yaw: Math.random() * Math.PI * 2,
-    hp: 30, maxHp: 30,
+    hp, maxHp: hp,
     wanderTimer: Math.random() * 4,
     walkPhase: Math.random() * 10,
     wingPhase: 0,
     onGround: false,
     dead: false,
     hitFlashTimer: 0,
-    rider: null,  // quem está montado
-    tamed: false
+    rider: null,
+    tamed: false,
+    speed, // velocidade específica da espécie
+    damage // dano do ataque
   });
 
-  console.log('🦖 Dinossauro spawnou em:', wx, wz, '| Total de dinos:', mobs.filter(m => m.type === 'dino').length);
+  const names = {
+    pterodactyl: 'Pterodáctilo',
+    trex: 'T-Rex',
+    triceratops: 'Triceratops',
+    raptor: 'Velociraptor'
+  };
+  console.log(`🦖 ${names[species]} spawnou em:`, wx, wz, '| Total:', mobs.filter(m => m.type === 'dino').length);
 }
 
 function mobIsSolidBelow(pos) {
@@ -2993,12 +3296,67 @@ function setupInput() {
           addItemToInventory(broken, 1);
         }
 
-        // Folhagem às vezes solta frutas — fonte de comida pra recuperar vida
+        // 🎁 SURPRESAS ESCONDIDAS EM QUALQUER BLOCO! 🎁
+        const surpriseRoll = Math.random();
+
+        // Pedra - itens comuns e raros
+        if (broken === BLOCK.STONE) {
+          if (surpriseRoll < 0.02) addItemToInventory(ITEM.DIAMOND, 1); // 2% diamante!
+          else if (surpriseRoll < 0.05) addItemToInventory(ITEM.RUBY, 1);
+          else if (surpriseRoll < 0.08) addItemToInventory(ITEM.SAPPHIRE, 1);
+          else if (surpriseRoll < 0.12) addItemToInventory(ITEM.KNIFE, 1);
+          else if (surpriseRoll < 0.18) addItemToInventory(ITEM.ARROW, 3 + Math.floor(Math.random() * 5));
+          else if (surpriseRoll < 0.22) addItemToInventory(ITEM.ANCIENT_COIN, 1);
+        }
+
+        // Terra - itens de sorte e natureza
+        else if (broken === BLOCK.DIRT) {
+          if (surpriseRoll < 0.03) addItemToInventory(ITEM.LUCKY_CLOVER, 1);
+          else if (surpriseRoll < 0.06) addItemToInventory(ITEM.TREASURE_MAP, 1);
+          else if (surpriseRoll < 0.10) addItemToInventory(ITEM.MYSTERIOUS_KEY, 1);
+          else if (surpriseRoll < 0.15) addItemToInventory(ITEM.ARROW, 2 + Math.floor(Math.random() * 3));
+        }
+
+        // Grama - itens mágicos
+        else if (broken === BLOCK.GRASS) {
+          if (surpriseRoll < 0.01) addItemToInventory(ITEM.GOLDEN_APPLE, 1); // SUPER RARO!
+          else if (surpriseRoll < 0.04) addItemToInventory(ITEM.MAGIC_CRYSTAL, 1);
+          else if (surpriseRoll < 0.08) addItemToInventory(ITEM.RAINBOW_GEM, 1);
+          else if (surpriseRoll < 0.12) addItemToInventory(ITEM.PEARL, 1);
+        }
+
+        // Areia - tesouros do deserto
+        else if (broken === BLOCK.SAND) {
+          if (surpriseRoll < 0.02) addItemToInventory(ITEM.EMERALD, 1);
+          else if (surpriseRoll < 0.05) addItemToInventory(ITEM.SAPPHIRE, 1);
+          else if (surpriseRoll < 0.10) addItemToInventory(ITEM.ANCIENT_COIN, 2);
+          else if (surpriseRoll < 0.15) addItemToInventory(ITEM.DAGGER, 1);
+        }
+
+        // Madeira - itens de sobrevivência
+        else if (broken === BLOCK.WOOD) {
+          if (surpriseRoll < 0.05) addItemToInventory(ITEM.KNIFE, 1);
+          else if (surpriseRoll < 0.12) addItemToInventory(ITEM.ARROW, 5 + Math.floor(Math.random() * 10));
+          else if (surpriseRoll < 0.16) addItemToInventory(ITEM.STICK, 3);
+        }
+
+        // Neve - itens celestiais
+        else if (broken === BLOCK.SNOW) {
+          if (surpriseRoll < 0.03) addItemToInventory(ITEM.STAR_FRAGMENT, 1);
+          else if (surpriseRoll < 0.06) addItemToInventory(ITEM.PHOENIX_FEATHER, 1);
+          else if (surpriseRoll < 0.10) addItemToInventory(ITEM.MAGIC_CRYSTAL, 1);
+          else if (surpriseRoll < 0.15) addItemToInventory(ITEM.PEARL, 1);
+        }
+
+        // Folhagem - frutas e livros encantados
         if (broken === BLOCK.LEAVES) {
           const fruitRoll = Math.random();
-          if (fruitRoll < 0.04) addItemToInventory(ITEM.MELON, 1);
-          else if (fruitRoll < 0.16) addItemToInventory(ITEM.APPLE, 1);
+          if (fruitRoll < 0.01) addItemToInventory(ITEM.ENCHANTED_BOOK, 1); // RARO!
+          else if (fruitRoll < 0.04) addItemToInventory(ITEM.GOLDEN_APPLE, 1);
+          else if (fruitRoll < 0.08) addItemToInventory(ITEM.MELON, 1);
+          else if (fruitRoll < 0.20) addItemToInventory(ITEM.APPLE, 1);
         }
+
         swingHand();
       }
     } else if (e.button === 0 && result.hit && result.prev) {
@@ -3339,8 +3697,15 @@ function update(dt) {
   } else if (sightedMob) {
     const mobNames = { cow: 'Vaca', zombie: 'Zumbi', dino: 'Dinossauro' };
     if (sightedMob.type === 'dino') {
+      const speciesNames = {
+        pterodactyl: '🦅 Pterodáctilo',
+        trex: '🦖 T-Rex',
+        triceratops: '🦏 Triceratops',
+        raptor: '🦎 Velociraptor'
+      };
+      const speciesName = speciesNames[sightedMob.species] || '🦖 Dinossauro';
       const action = player.ridingDino === sightedMob ? 'montado! [R] desmontar' : 'clique direito p/ montar';
-      document.getElementById('target-block').textContent = `🦖 ${mobNames[sightedMob.type]} (${Math.max(0, sightedMob.hp)}/${sightedMob.maxHp} HP) — ${action}`;
+      document.getElementById('target-block').textContent = `${speciesName} (${Math.max(0, sightedMob.hp)}/${sightedMob.maxHp} HP) — ${action}`;
     } else {
       document.getElementById('target-block').textContent = `${mobNames[sightedMob.type] || 'Criatura'} (${Math.max(0, sightedMob.hp)}/${sightedMob.maxHp} HP)`;
     }
