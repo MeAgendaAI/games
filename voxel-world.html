@@ -1578,8 +1578,8 @@ function updateDroppedItems(dt) {
 const mobs = [];
 const MAX_COWS = 12;
 const COW_SPAWN_CHANCE = 0.35; // per loaded chunk
-const MAX_DINOS = 6;
-const DINO_SPAWN_CHANCE = 0.22;
+const MAX_DINOS = 8;
+const DINO_SPAWN_CHANCE = 0.65;  // aumentado para 65% - mais fácil de encontrar!
 
 function makeCowMesh() {
   const group = new THREE.Group();
@@ -1711,7 +1711,12 @@ function makeDinoMesh() {
 function spawnDino(wx, wz) {
   if (mobs.filter(m => m.type === 'dino').length >= MAX_DINOS) return;
   const h = getHeight(wx, wz);
-  if (getWorldBlock(wx, h, wz) !== BLOCK.GRASS) return;
+  const groundBlock = getWorldBlock(wx, h, wz);
+
+  // Dinossauros spawnam em grama, areia ou neve (não apenas grama!)
+  if (groundBlock !== BLOCK.GRASS && groundBlock !== BLOCK.SAND && groundBlock !== BLOCK.SNOW) return;
+  // Não spawnar em água
+  if (h <= WATER_LEVEL) return;
 
   const mesh = makeDinoMesh();
   mesh.position.set(wx + 0.5, h + 1, wz + 0.5);
@@ -1733,6 +1738,8 @@ function spawnDino(wx, wz) {
     rider: null,  // quem está montado
     tamed: false
   });
+
+  console.log('🦖 Dinossauro spawnou em:', wx, wz, '| Total de dinos:', mobs.filter(m => m.type === 'dino').length);
 }
 
 function mobIsSolidBelow(pos) {
