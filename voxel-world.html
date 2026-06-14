@@ -1,0 +1,3173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World_TOP — Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+    color: #e0f0ff;
+  }
+
+  #canvas { display: block; width: 100vw; height: 100vh; }
+
+  /* HUD */
+  #hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #hud::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,5,0.45) 100%);
+  }
+
+  /* Crosshair */
+  #crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px; height: 24px;
+  }
+  body.mobile-layout #crosshair {
+    display: none; /* Esconde a mira no mobile */
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,255,255,0.85);
+    border-radius: 1px;
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+  #crosshair::after  { width: 100%; height: 2px; top: 50%; transform: translateY(-50%); }
+
+  /* Top bar */
+  #topbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  }
+  #logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    color: #4df0c0;
+    text-shadow: 0 0 20px #4df0c088;
+  }
+  #logo span { color: #ff6b35; }
+
+  #stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.7rem;
+    color: #7af0cc99;
+  }
+  #stats b { color: #4df0c0; }
+
+  /* Toolbar */
+  #toolbar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(77,240,192,0.2);
+    border-radius: 10px;
+    padding: 6px;
+    backdrop-filter: blur(10px);
+  }
+  .slot {
+    width: 52px; height: 52px;
+    border: 2px solid rgba(77,240,192,0.35);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.55rem;
+    color: #7af0cc99;
+    position: relative;
+    background: rgba(15,30,35,0.65);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+  }
+  .slot:hover { border-color: #4df0c0aa; background: rgba(77,240,192,0.15); }
+  .slot.active {
+    border-color: #4df0c0;
+    background: rgba(77,240,192,0.12);
+    color: #4df0c0;
+    box-shadow: 0 0 12px #4df0c044;
+  }
+  .slot-icon { font-size: 1.3rem; }
+
+  /* Info panel */
+  #info {
+    position: absolute;
+    top: 60px; right: 20px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(77,240,192,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.68rem;
+    line-height: 1.9;
+    color: #7af0cccc;
+    backdrop-filter: blur(8px);
+    min-width: 180px;
+  }
+  #info .label { color: #4df0c0; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  #info b { color: #e0f0ff; }
+
+  /* Controls hint */
+  #controls {
+    position: absolute;
+    bottom: 100px; left: 20px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.62rem;
+    line-height: 2;
+    color: #ff6b3599;
+    backdrop-filter: blur(8px);
+  }
+  #controls .label { color: #ff6b35; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  #controls kbd {
+    display: inline-block;
+    background: rgba(255,107,53,0.15);
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: inherit;
+    font-size: 0.6rem;
+    color: #ff9966;
+  }
+
+  /* Pointer lock overlay */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,10,0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: pointer;
+    transition: opacity 0.4s;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+
+  #overlay-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: #4df0c0;
+    text-shadow: 0 0 40px #4df0c066, 0 0 80px #4df0c033;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  #overlay-title span { color: #ff6b35; }
+
+  #overlay-sub {
+    font-size: 0.75rem;
+    color: #4df0c088;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  #overlay-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: transparent;
+    border: 2px solid #4df0c0;
+    color: #4df0c0;
+    border-radius: 6px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s;
+    text-shadow: 0 0 10px #4df0c066;
+    box-shadow: 0 0 20px #4df0c022, inset 0 0 20px #4df0c011;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  #overlay-btn:hover {
+    background: rgba(77,240,192,0.1);
+    box-shadow: 0 0 40px #4df0c044, inset 0 0 30px #4df0c022;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px #4df0c022, inset 0 0 20px #4df0c011; }
+    50%       { box-shadow: 0 0 40px #4df0c055, inset 0 0 30px #4df0c022; }
+  }
+
+  #seed-display {
+    margin-top: 32px;
+    font-size: 0.62rem;
+    color: #4df0c044;
+    letter-spacing: 0.1em;
+  }
+
+  /* Game over */
+  #gameover-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,0,0,0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 110;
+    transition: opacity 0.3s;
+  }
+  #gameover-overlay.hidden { opacity: 0; pointer-events: none; display: none; }
+
+  #gameover-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: #ff5b5b;
+    text-shadow: 0 0 40px #ff5b5b66, 0 0 80px #ff5b5b33;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  #gameover-sub {
+    font-size: 0.75rem;
+    color: #ff8a8a99;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+  #gameover-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: transparent;
+    border: 2px solid #ff5b5b;
+    color: #ff5b5b;
+    border-radius: 6px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s;
+    text-shadow: 0 0 10px #ff5b5b66;
+    box-shadow: 0 0 20px #ff5b5b22, inset 0 0 20px #ff5b5b11;
+  }
+  #gameover-btn:hover {
+    background: rgba(255,91,91,0.12);
+    box-shadow: 0 0 40px #ff5b5b44, inset 0 0 30px #ff5b5b22;
+  }
+
+  /* Inventory */
+  #inventory-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,10,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    backdrop-filter: blur(4px);
+  }
+  #inventory-overlay.hidden { display: none; }
+
+  #inventory-panel {
+    background: rgba(10,14,20,0.94);
+    border: 1px solid rgba(77,240,192,0.3);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 0 60px rgba(77,240,192,0.15);
+  }
+  .inv-title {
+    font-family: 'Orbitron', sans-serif;
+    color: #4df0c0;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 52px);
+    gap: 6px;
+  }
+  .hotbar-mirror { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(77,240,192,0.15); }
+
+  .inv-layout { display: flex; gap: 28px; align-items: flex-start; }
+  .craft-panel { width: 290px; }
+  .craft-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+  .craft-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15,30,35,0.55);
+    border: 1px solid rgba(77,240,192,0.25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .craft-row:hover:not(.disabled) { background: rgba(77,240,192,0.15); border-color: #4df0c0aa; }
+  .craft-row.disabled { opacity: 0.4; cursor: not-allowed; }
+  .craft-io { display: flex; align-items: center; gap: 3px; font-size: 0.95rem; }
+  .craft-io .craft-count { font-size: 0.6rem; color: #aef; margin-right: 2px; }
+  .craft-arrow { color: #4df0c0aa; font-size: 0.8rem; margin: 0 4px; }
+  .craft-out { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 1.1rem; }
+  .craft-out .craft-count { font-size: 0.65rem; color: #fff; }
+  .craft-name { font-size: 0.6rem; color: #9fe; letter-spacing: 0.04em; text-transform: uppercase; margin-left: 6px; }
+  .inv-hint {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 0.6rem;
+    color: #7af0cc88;
+    letter-spacing: 0.05em;
+  }
+  .inv-hint kbd {
+    display: inline-block;
+    background: rgba(77,240,192,0.12);
+    border: 1px solid rgba(77,240,192,0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: inherit;
+    color: #4df0c0;
+  }
+
+  .inv-slot-count {
+    position: absolute;
+    bottom: 2px; right: 5px;
+    font-size: 0.62rem;
+    color: #fff;
+    text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 1px #000;
+  }
+
+  #cursor-item {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    font-size: 1.5rem;
+    display: none;
+    transform: translate(-60%, -60%);
+  }
+  #cursor-item .inv-slot-count { right: -10px; bottom: -6px; }
+
+  #damage-flash {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle, rgba(200,0,0,0) 40%, rgba(200,0,0,0.45) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease-out;
+    z-index: 40;
+  }
+
+  /* Block select panel */
+  #block-label {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    color: #4df0c0aa;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     CONTROLES MOBILE (toque) — joystick + olhar + botões
+     ════════════════════════════════════════════════════════════ */
+  #mobile-controls {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    touch-action: none;
+  }
+  #mobile-controls.hidden { display: none; }
+
+  #look-zone {
+    position: absolute;
+    inset: 0;
+    z-index: 51;
+  }
+
+  #joystick-zone {
+    position: absolute;
+    left: 28px;
+    bottom: 28px;
+    width: 130px;
+    height: 130px;
+    z-index: 52;
+  }
+  #joystick-base {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.22);
+  }
+  #joystick-knob {
+    position: absolute;
+    width: 54px;
+    height: 54px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(77,240,192,0.35);
+    border: 2px solid rgba(77,240,192,0.75);
+  }
+
+  #mobile-actions {
+    position: absolute;
+    right: 18px;
+    bottom: 26px;
+    width: 200px;
+    height: 220px;
+    z-index: 52;
+  }
+  .mobile-btn {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.28);
+    background: rgba(0,0,0,0.4);
+    color: #e0f0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .mobile-btn:active {
+    background: rgba(77,240,192,0.35);
+    border-color: #4df0c0;
+  }
+  #btn-jump {
+    width: 76px; height: 76px;
+    right: 0; bottom: 0;
+    font-size: 1.7rem;
+  }
+  #btn-down {
+    width: 50px; height: 50px;
+    right: 88px; bottom: 13px;
+    font-size: 1.2rem;
+  }
+  #btn-break {
+    width: 56px; height: 56px;
+    right: 0; bottom: 92px;
+    font-size: 1.25rem;
+  }
+  #btn-place {
+    width: 56px; height: 56px;
+    right: 70px; bottom: 92px;
+    font-size: 1.25rem;
+  }
+  #btn-inventory {
+    width: 44px; height: 44px;
+    right: 140px; bottom: 158px;
+    font-size: 1.05rem;
+    opacity: 0.85;
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     LAYOUT MOBILE — barra de itens e inventário não cortam mais
+     (a barra de toque ocupa toda a faixa inferior, então a hotbar
+     sobe para ficar acima dela; a janela de inventário encolhe e
+     empilha em coluna única para caber na tela)
+     ════════════════════════════════════════════════════════════ */
+  body.mobile-layout #toolbar {
+    bottom: 256px; /* fica acima da zona de botões de toque (até 246px) */
+    gap: 3px;
+    padding: 4px;
+    border-radius: 8px;
+    max-width: calc(100vw - 16px);
+  }
+  body.mobile-layout .slot {
+    width: 9vw;
+    height: 9vw;
+    min-width: 26px;
+    min-height: 26px;
+    max-width: 36px;
+    max-height: 36px;
+    gap: 1px;
+    border-radius: 6px;
+    font-size: 0.4rem;
+  }
+  body.mobile-layout .slot-icon { font-size: 0.95rem; }
+  body.mobile-layout .inv-slot-count { font-size: 0.55rem; bottom: 1px; right: 3px; }
+
+  body.mobile-layout #inventory-panel {
+    width: 94vw;
+    max-width: 94vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 14px;
+  }
+  body.mobile-layout .inv-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+  body.mobile-layout .inv-grid {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 4px;
+  }
+  /* Dentro do grid do inventário, o slot ocupa a célula inteira (a coluna
+     já foi dimensionada pelo grid) em vez do tamanho fixo da hotbar —
+     evita que os slots transbordem a largura da tela */
+  body.mobile-layout .inv-grid .slot {
+    width: auto;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    max-width: none;
+  }
+  body.mobile-layout .craft-panel { width: 100%; }
+  body.mobile-layout .craft-list { max-height: 220px; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+  <div id="crosshair"></div>
+
+  <div id="topbar">
+    <div id="logo">World_<span>TOP</span></div>
+    <div id="stats">
+      <span>X: <b id="px">0</b></span>
+      <span>Y: <b id="py">0</b></span>
+      <span>Z: <b id="pz">0</b></span>
+      <span>FPS: <b id="fps">0</b></span>
+      <span>Chunks: <b id="chunks">0</b></span>
+    </div>
+  </div>
+
+  <div id="info">
+    <div class="label">// mundo</div>
+    Seed: <b id="seed-val">---</b><br>
+    Bloco mirado: <b id="target-block">---</b><br>
+    Bioma: <b id="biome">Planície</b><br>
+    Hora: <b id="time-display">06:00</b><br>
+    Modo: <b id="fly-status">Andando</b><br>
+    Vida: <b id="hp-display">20/20 ❤️</b><br>
+    Volume rádio: <b id="radio-volume-display">30%</b>
+  </div>
+  <div id="damage-flash"></div>
+
+  <div id="controls">
+    <div class="label">// controles</div>
+    <kbd>WASD</kbd> mover &nbsp; <kbd>Space</kbd> pular/voar<br>
+    <kbd>Mouse</kbd> olhar &nbsp; <kbd>Scroll</kbd> trocar slot<br>
+    <kbd>Mouse Esq.</kbd> colocar &nbsp; <kbd>Mouse Dir.</kbd> quebrar<br>
+    <kbd>1-9</kbd> slot &nbsp; <kbd>E</kbd> inventário<br>
+    <kbd>F</kbd> comer fruta (recupera vida)<br>
+    <kbd>R</kbd> desmontar do dinossauro 🦖<br>
+    <kbd>[</kbd> <kbd>]</kbd> volume da rádio/telão
+  </div>
+
+  <div id="block-label">— vazio —</div>
+
+  <div id="toolbar"></div>
+</div>
+
+<div id="inventory-overlay" class="hidden">
+  <div id="inventory-panel">
+    <div class="inv-layout">
+      <div>
+        <div class="inv-title">// inventário</div>
+        <div id="inv-grid" class="inv-grid"></div>
+        <div id="inv-hotbar" class="inv-grid hotbar-mirror"></div>
+        <div class="inv-hint">Clique para pegar/trocar itens • <kbd>E</kbd> ou <kbd>Esc</kbd> para fechar</div>
+      </div>
+      <div class="craft-panel">
+        <div class="inv-title">// crafting</div>
+        <div id="craft-list" class="craft-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cursor-item"></div>
+
+<div id="overlay">
+  <div id="overlay-title">World_<span>TOP</span></div>
+  <div id="overlay-sub">Prototype v0.1 — Mundo Procedural</div>
+  <button id="overlay-btn" onclick="startGame()">▶ Entrar no Mundo</button>
+  <div id="seed-display">Gerando seed...</div>
+</div>
+
+<div id="gameover-overlay" class="hidden">
+  <div id="gameover-title">VOCÊ MORREU</div>
+  <div id="gameover-sub">A aventura terminou... por enquanto</div>
+  <button id="gameover-btn" onclick="restartGame()">↻ Jogar Novamente</button>
+</div>
+
+<!-- Controles para celular/tablet (toque) -->
+<div id="mobile-controls" class="hidden">
+  <div id="look-zone"></div>
+  <div id="joystick-zone">
+    <div id="joystick-base">
+      <div id="joystick-knob"></div>
+    </div>
+  </div>
+  <div id="mobile-actions">
+    <button id="btn-inventory" class="mobile-btn" aria-label="Inventário">🎒</button>
+    <button id="btn-break" class="mobile-btn" aria-label="Quebrar / interagir">⛏</button>
+    <button id="btn-place" class="mobile-btn" aria-label="Colocar bloco">▦</button>
+    <button id="btn-down" class="mobile-btn" aria-label="Descer (voando) / correr">⬇</button>
+    <button id="btn-jump" class="mobile-btn" aria-label="Pular / subir (voando) — toque 2x pra alternar voo">⤒</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+// ============================================================
+//  WORLD_TOP — Prototype
+//  Three.js voxel engine with procedural terrain
+// ============================================================
+
+const CHUNK_SIZE = 16;
+const CHUNK_HEIGHT = 64;
+const RENDER_DISTANCE = 3;
+const BLOCK_SIZE = 1;
+
+// Block types
+const BLOCK = {
+  AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4,
+  WOOD: 5, LEAVES: 6, SNOW: 7, WATER: 8,
+  PLANKS: 9, // craftável a partir de Madeira — não aparece naturalmente no terreno
+  // Variantes só usadas nas paredes/telhados das casinhas prontas, pra dar
+  // variedade de cor às construções espalhadas pelo mundo (vermelha, etc).
+  BRICK_RED: 10,
+  ROOF_DARK: 11,
+};
+
+const BLOCK_COLORS = {
+  [BLOCK.GRASS]:  [0x4a8f3f, 0x5ca84d],
+  [BLOCK.DIRT]:   [0x7a5230, 0x8b6040],
+  [BLOCK.STONE]:  [0x707070, 0x888888],
+  [BLOCK.SAND]:   [0xd4bc7a, 0xe0cc88],
+  [BLOCK.WOOD]:   [0x6b4423, 0x7a5230],
+  [BLOCK.LEAVES]: [0x2d6e2d, 0x3a8a3a],
+  [BLOCK.SNOW]:   [0xeeeeff, 0xffffff],
+  [BLOCK.WATER]:  [0x1a5faa, 0x2277cc],
+  [BLOCK.PLANKS]:    [0xab8456, 0xc49a6c],
+  [BLOCK.BRICK_RED]: [0xa83c32, 0xc24c3f],
+  [BLOCK.ROOF_DARK]: [0x5a2620, 0x6e2f27],
+};
+
+// ============================================================
+//  ITEMS & INVENTORY
+// ============================================================
+// Maps a block type to the item it drops / can be placed from.
+const ITEM_INFO = {
+  [BLOCK.GRASS]:  { name: 'Grama',   icon: '🟩', stack: 64, block: BLOCK.GRASS },
+  [BLOCK.DIRT]:   { name: 'Terra',   icon: '🟫', stack: 64, block: BLOCK.DIRT },
+  [BLOCK.STONE]:  { name: 'Pedra',   icon: '🪨', stack: 64, block: BLOCK.STONE },
+  [BLOCK.SAND]:   { name: 'Areia',   icon: '🟨', stack: 64, block: BLOCK.SAND },
+  [BLOCK.WOOD]:   { name: 'Madeira', icon: '🪵', stack: 64, block: BLOCK.WOOD },
+  [BLOCK.LEAVES]: { name: 'Folhas',  icon: '🍃', stack: 64, block: BLOCK.LEAVES },
+  [BLOCK.SNOW]:   { name: 'Neve',    icon: '❄️', stack: 64, block: BLOCK.SNOW },
+  [BLOCK.PLANKS]: { name: 'Tábuas',  icon: '🟧', stack: 64, block: BLOCK.PLANKS },
+};
+
+// Non-block items (tools, weapons, food) live in their own id range so they
+// never collide with BLOCK ids.
+const ITEM = {
+  SWORD_WOOD: 100,
+  RAW_BEEF: 101,
+  SWORD_STONE: 102,
+  STICK: 103,
+  APPLE: 104,
+  MELON: 105,
+};
+ITEM_INFO[ITEM.SWORD_WOOD]  = { name: 'Espada de Madeira', icon: '🗡️', stack: 1,  block: null, tool: 'sword', damage: 4 };
+ITEM_INFO[ITEM.RAW_BEEF]    = { name: 'Carne Crua',        icon: '🥩', stack: 16, block: null };
+ITEM_INFO[ITEM.SWORD_STONE] = { name: 'Espada de Pedra',   icon: '⚔️', stack: 1,  block: null, tool: 'sword', damage: 6 };
+ITEM_INFO[ITEM.STICK]       = { name: 'Bastão',            icon: '🥢', stack: 64, block: null };
+// Frutas — comer com [F] recupera vida (campo "food" = quantidade de HP curada)
+ITEM_INFO[ITEM.APPLE]       = { name: 'Maçã',              icon: '🍎', stack: 16, block: null, food: 4 };
+ITEM_INFO[ITEM.MELON]       = { name: 'Melancia',          icon: '🍉', stack: 16, block: null, food: 7 };
+
+// ============================================================
+//  CRAFTING
+// ============================================================
+// Cada receita consome `inputs` (lista de {id, count}) e produz `output`.
+// Sem grade/posicionamento — só precisa ter os materiais no inventário.
+const RECIPES = [
+  { id: 'planks',      inputs: [{ id: BLOCK.WOOD, count: 1 }],                                output: { id: BLOCK.PLANKS,      count: 4 } },
+  { id: 'sticks',      inputs: [{ id: BLOCK.PLANKS, count: 2 }],                              output: { id: ITEM.STICK,        count: 4 } },
+  { id: 'sword_wood',  inputs: [{ id: BLOCK.PLANKS, count: 2 }, { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_WOOD,  count: 1 } },
+  { id: 'sword_stone', inputs: [{ id: BLOCK.STONE, count: 2 },  { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_STONE, count: 1 } },
+];
+
+function countItem(itemId) {
+  let total = 0;
+  for (const slot of inventory) if (slot && slot.id === itemId) total += slot.count;
+  return total;
+}
+
+function canCraft(recipe) {
+  return recipe.inputs.every(inp => countItem(inp.id) >= inp.count);
+}
+
+function removeItemAmount(itemId, amount) {
+  for (let i = 0; i < INVENTORY_SIZE && amount > 0; i++) {
+    const slot = inventory[i];
+    if (slot && slot.id === itemId) {
+      const take = Math.min(slot.count, amount);
+      slot.count -= take;
+      amount -= take;
+      if (slot.count <= 0) inventory[i] = null;
+    }
+  }
+}
+
+function craftRecipe(recipe) {
+  if (!canCraft(recipe)) return;
+  for (const inp of recipe.inputs) removeItemAmount(inp.id, inp.count);
+  addItemToInventory(recipe.output.id, recipe.output.count);
+  renderCraftList();
+}
+
+const HOTBAR_SIZE = 9;
+const INV_MAIN_SLOTS = 27;
+const INVENTORY_SIZE = HOTBAR_SIZE + INV_MAIN_SLOTS;
+
+// inventory[i] = { id, count } | null  — slots 0..8 = hotbar, 9..35 = backpack
+const inventory = new Array(INVENTORY_SIZE).fill(null);
+let cursorStack = null;   // item currently "held" by the mouse in the inventory screen
+let inventoryOpen = false;
+
+function addItemToInventory(itemId, count) {
+  const info = ITEM_INFO[itemId];
+  if (!info) return count;
+  // Merge into existing stacks first
+  for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
+    const slot = inventory[i];
+    if (slot && slot.id === itemId && slot.count < info.stack) {
+      const add = Math.min(info.stack - slot.count, count);
+      slot.count += add;
+      count -= add;
+    }
+  }
+  // Then fill empty slots
+  for (let i = 0; i < INVENTORY_SIZE && count > 0; i++) {
+    if (!inventory[i]) {
+      const add = Math.min(info.stack, count);
+      inventory[i] = { id: itemId, count: add };
+      count -= add;
+    }
+  }
+  renderInventory();
+  return count; // leftover that didn't fit anywhere
+}
+
+function removeOneFromSlot(slotIndex) {
+  const slot = inventory[slotIndex];
+  if (!slot) return;
+  slot.count--;
+  if (slot.count <= 0) inventory[slotIndex] = null;
+  renderInventory();
+}
+
+function makeSlotEl(index, active, onClick) {
+  const item = inventory[index];
+  const div = document.createElement('div');
+  div.className = 'slot' + (active ? ' active' : '');
+  if (item) {
+    const info = ITEM_INFO[item.id];
+    div.innerHTML = `<div class="slot-icon">${info.icon}</div>` +
+      (item.count > 1 ? `<span class="inv-slot-count">${item.count}</span>` : '');
+  }
+  div.addEventListener('click', onClick);
+  return div;
+}
+
+function renderHotbar() {
+  const bar = document.getElementById('toolbar');
+  bar.innerHTML = '';
+  for (let i = 0; i < HOTBAR_SIZE; i++) {
+    bar.appendChild(makeSlotEl(i, i === player.selectedSlot, () => selectSlot(i)));
+  }
+  updateBlockLabel();
+}
+
+function renderInventoryGrid() {
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+  for (let i = HOTBAR_SIZE; i < INVENTORY_SIZE; i++) {
+    grid.appendChild(makeSlotEl(i, false, () => onInventorySlotClick(i)));
+  }
+  const hb = document.getElementById('inv-hotbar');
+  hb.innerHTML = '';
+  for (let i = 0; i < HOTBAR_SIZE; i++) {
+    hb.appendChild(makeSlotEl(i, i === player.selectedSlot, () => onInventorySlotClick(i)));
+  }
+}
+
+function renderCraftList() {
+  const list = document.getElementById('craft-list');
+  list.innerHTML = '';
+  for (const recipe of RECIPES) {
+    const ok = canCraft(recipe);
+    const row = document.createElement('div');
+    row.className = 'craft-row' + (ok ? '' : ' disabled');
+
+    const ioWrap = document.createElement('div');
+    ioWrap.style.display = 'flex';
+    ioWrap.style.alignItems = 'center';
+    ioWrap.style.flex = '1';
+    recipe.inputs.forEach((inp, idx) => {
+      const info = ITEM_INFO[inp.id];
+      const have = countItem(inp.id);
+      const span = document.createElement('span');
+      span.className = 'craft-io';
+      span.innerHTML = `<span class="craft-count">${have}/${inp.count}</span>${info.icon}`;
+      span.title = info.name;
+      ioWrap.appendChild(span);
+      if (idx < recipe.inputs.length - 1) {
+        const plus = document.createElement('span');
+        plus.className = 'craft-arrow';
+        plus.textContent = '+';
+        ioWrap.appendChild(plus);
+      }
+    });
+    const arrow = document.createElement('span');
+    arrow.className = 'craft-arrow';
+    arrow.textContent = '→';
+    ioWrap.appendChild(arrow);
+
+    const out = document.createElement('span');
+    out.className = 'craft-out';
+    const outInfo = ITEM_INFO[recipe.output.id];
+    out.innerHTML = `${outInfo.icon}<span class="craft-count">x${recipe.output.count}</span>`;
+    const name = document.createElement('span');
+    name.className = 'craft-name';
+    name.textContent = outInfo.name;
+    out.appendChild(name);
+    ioWrap.appendChild(out);
+
+    row.appendChild(ioWrap);
+    row.addEventListener('click', () => craftRecipe(recipe));
+    list.appendChild(row);
+  }
+}
+
+function renderInventory() {
+  renderHotbar();
+  if (inventoryOpen) { renderInventoryGrid(); renderCraftList(); }
+}
+
+function onInventorySlotClick(index) {
+  const slot = inventory[index];
+  if (!cursorStack && slot) {
+    cursorStack = slot;
+    inventory[index] = null;
+  } else if (cursorStack && !slot) {
+    inventory[index] = cursorStack;
+    cursorStack = null;
+  } else if (cursorStack && slot) {
+    if (slot.id === cursorStack.id) {
+      const info = ITEM_INFO[slot.id];
+      const total = slot.count + cursorStack.count;
+      const merged = Math.min(total, info.stack);
+      slot.count = merged;
+      const rest = total - merged;
+      cursorStack = rest > 0 ? { id: cursorStack.id, count: rest } : null;
+    } else {
+      inventory[index] = cursorStack;
+      cursorStack = slot;
+    }
+  }
+  renderInventory();
+  updateCursorItem();
+}
+
+function updateCursorItem() {
+  const el = document.getElementById('cursor-item');
+  if (cursorStack) {
+    const info = ITEM_INFO[cursorStack.id];
+    el.style.display = 'block';
+    el.innerHTML = `${info.icon}` + (cursorStack.count > 1 ? `<span class="inv-slot-count">${cursorStack.count}</span>` : '');
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function toggleInventory() {
+  inventoryOpen = !inventoryOpen;
+  const overlay = document.getElementById('inventory-overlay');
+  if (inventoryOpen) {
+    overlay.classList.remove('hidden');
+    renderInventoryGrid();
+    renderCraftList();
+    if (pointerLocked && !isMobile) document.exitPointerLock();
+    // Esconde os controles de toque pra não ficarem por cima da grade do inventário (apenas mobile)
+    if (isMobile) document.getElementById('mobile-controls').classList.add('hidden');
+  } else {
+    overlay.classList.add('hidden');
+    if (cursorStack) {
+      addItemToInventory(cursorStack.id, cursorStack.count);
+      cursorStack = null;
+      updateCursorItem();
+    }
+    renderHotbar();
+    if (!isMobile) {
+      renderer.domElement.requestPointerLock();
+    } else {
+      document.getElementById('mobile-controls').classList.remove('hidden');
+    }
+  }
+}
+
+function updateBlockLabel() {
+  const slot = inventory[player.selectedSlot];
+  document.getElementById('block-label').textContent = slot ? `— ${ITEM_INFO[slot.id].name.toUpperCase()} —` : '— vazio —';
+}
+
+// Simple noise (no external lib needed)
+class Noise {
+  constructor(seed) {
+    this.seed = seed;
+    this.perm = new Array(512);
+    const p = [];
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = seed | 0;
+    for (let i = 255; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      const j = ((s >>> 0) % (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+  }
+  fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+  lerp(a, b, t) { return a + t * (b - a); }
+  grad(hash, x, y) {
+    const h = hash & 3;
+    const u = h < 2 ? x : y;
+    const v = h < 2 ? y : x;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+  }
+  noise2d(x, y) {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    x -= Math.floor(x); y -= Math.floor(y);
+    const u = this.fade(x), v = this.fade(y);
+    const a = this.perm[X]+Y, b = this.perm[X+1]+Y;
+    return this.lerp(
+      this.lerp(this.grad(this.perm[a],x,y), this.grad(this.perm[b],x-1,y),u),
+      this.lerp(this.grad(this.perm[a+1],x,y-1), this.grad(this.perm[b+1],x-1,y-1),u), v
+    );
+  }
+  octave(x, y, octs, per, lac) {
+    let val = 0, amp = 1, freq = 1, max = 0;
+    for (let i = 0; i < octs; i++) {
+      val += this.noise2d(x*freq, y*freq) * amp;
+      max += amp; amp *= per; freq *= lac;
+    }
+    return val / max;
+  }
+}
+
+// ============================================================
+//  WORLD
+// ============================================================
+let scene, camera, renderer;
+let composer, bloomPass;
+
+function setupPostProcessing() {
+  composer = new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene, camera));
+  // Subtle glow on bright things (sun, sky) — gives that painterly/atmospheric look
+  bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.45, 0.86);
+  composer.addPass(bloomPass);
+}
+let chunks = new Map();
+let noise;
+let SEED;
+let clock;
+let worldTime = 0; // 0-1 day cycle
+
+// Player
+const player = {
+  pos: new THREE.Vector3(0, 40, 0),
+  vel: new THREE.Vector3(),
+  onGround: false,
+  yaw: 0, pitch: 0,
+  selectedSlot: 0,
+  speed: 8,  // aumentado de 5 para 8 — caminhada mais rápida
+  jumpForce: 8,
+  height: 1.7,
+  flying: false,
+  hp: 20,
+  maxHp: 20,
+  invuln: 0,
+  ridingDino: null  // referência ao dino que está sendo montado
+};
+
+const keys = {};
+let pointerLocked = false;
+// Detecção mobile mais precisa - verifica tamanho de tela E tipo de dispositivo
+const isMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) &&
+                  (window.innerWidth <= 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+let mobileMove = { x: 0, y: 0 }; // movimento via joystick virtual: x = força lateral, y = força frente/trás
+let frameCount = 0, lastFpsTime = 0, currentFps = 0;
+
+// Materials cache
+const matCache = new Map();
+
+function getBlockMaterial(blockType, face) {
+  const key = `${blockType}_${face}`;
+  if (matCache.has(key)) return matCache.get(key);
+  const colors = BLOCK_COLORS[blockType] || [0xffffff, 0xffffff];
+  // top face brighter, sides/bottom darker
+  const c = (face === 'top') ? colors[1] : (face === 'bottom') ? colors[0] * 0.6 : colors[0];
+  const opts = { color: c, vertexColors: true };
+  if (blockType === BLOCK.WATER) { opts.transparent = true; opts.opacity = 0.72; }
+  const mat = new THREE.MeshLambertMaterial(opts);
+  matCache.set(key, mat);
+  return mat;
+}
+
+function getHeight(wx, wz) {
+  const scale = 0.025;
+  const h = noise.octave(wx * scale, wz * scale, 6, 0.5, 2.0);
+  return Math.floor(28 + h * 22);
+}
+
+function getBiome(wx, wz) {
+  const b = noise.octave(wx * 0.008 + 100, wz * 0.008 + 100, 2, 0.5, 2);
+  if (b > 0.3) return 'montanha';
+  if (b < -0.3) return 'deserto';
+  return 'planície';
+}
+
+const WATER_LEVEL = 25;
+
+// Guarda onde cada casa pronta nasceu (chunkKey -> posição/direção da TV
+// dentro dela), pra gente conseguir colocar e remover a TV junto com o chunk.
+const housePositions = new Map();
+
+// Ridged noise: fica perto de 1 exatamente onde o ruído cruza zero, formando
+// faixas sinuosas e estreitas — perfeito pra desenhar rios serpenteando.
+function getRiverMask(wx, wz) {
+  const n = noise.octave(wx * 0.012 + 4000, wz * 0.012 + 4000, 2, 0.5, 2);
+  return 1 - Math.abs(n);
+}
+
+function generateChunkData(cx, cz) {
+  const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+  const idx = (x, y, z) => x + CHUNK_SIZE * (y + CHUNK_HEIGHT * z);
+
+  for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+      const wx = cx * CHUNK_SIZE + lx;
+      const wz = cz * CHUNK_SIZE + lz;
+      const h = getHeight(wx, wz);
+      const biome = getBiome(wx, wz);
+
+      // Rivers: where the ridged mask peaks, carve the surface down to the
+      // waterline and flood it — turns winding noise lines into actual rivers.
+      const isRiver = h < 48 && getRiverMask(wx, wz) > 0.975;
+      const surfaceH = isRiver ? Math.min(h, WATER_LEVEL - 1) : h;
+
+      for (let ly = 0; ly < CHUNK_HEIGHT; ly++) {
+        let block = BLOCK.AIR;
+        if (ly === 0) {
+          block = BLOCK.STONE;
+        } else if (ly < surfaceH - 3) {
+          block = BLOCK.STONE;
+        } else if (ly < surfaceH) {
+          block = (isRiver || biome === 'deserto') ? BLOCK.SAND : BLOCK.DIRT;
+        } else if (ly === surfaceH) {
+          if (isRiver || biome === 'deserto') block = BLOCK.SAND;
+          else if (h > 46) block = BLOCK.SNOW;
+          else block = BLOCK.GRASS;
+        } else if (isRiver && ly <= WATER_LEVEL) {
+          block = BLOCK.WATER;
+        }
+        data[idx(lx, ly, lz)] = block;
+      }
+
+      // Trees (planície only, never inside rivers)
+      if (!isRiver && biome === 'planície' && h < 44 && h > 20) {
+        const treeNoise = noise.noise2d(wx * 0.3, wz * 0.3);
+        if (treeNoise > 0.55) {
+          const th = 4 + Math.floor(Math.abs(noise.noise2d(wx*0.7, wz*0.7)) * 2);
+          for (let ty = 1; ty <= th; ty++) {
+            if (h + ty < CHUNK_HEIGHT) data[idx(lx, h + ty, lz)] = BLOCK.WOOD;
+          }
+          // Leaves
+          for (let lly = -1; lly <= 2; lly++) {
+            for (let llx = -2; llx <= 2; llx++) {
+              for (let llz = -2; llz <= 2; llz++) {
+                const dist = Math.abs(llx) + Math.abs(llz) + Math.abs(lly);
+                if (dist <= 3) {
+                  const ly2 = h + th + lly;
+                  const lx2 = lx + llx, lz2 = lz + llz;
+                  if (lx2 >= 0 && lx2 < CHUNK_SIZE && lz2 >= 0 && lz2 < CHUNK_SIZE && ly2 >= 0 && ly2 < CHUNK_HEIGHT) {
+                    if (data[idx(lx2, ly2, lz2)] === BLOCK.AIR)
+                      data[idx(lx2, ly2, lz2)] = BLOCK.LEAVES;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Casinhas — espalhadas pelo mundo em pedaços de planície razoavelmente
+  // planos (sem rios por baixo). Cada uma sorteia um estilo de cor diferente
+  // (madeira/tábuas clássica ou tijolo vermelho com telhado escuro).
+  const houseRoll = noise.noise2d(cx * 0.41 + 9000, cz * 0.41 + 9000);
+  // O chunk do spawn (0,0) sempre tenta ter casa — assim o jogador esbarra
+  // numa rádio Login FM logo nos primeiros passos, sem precisar procurar.
+  const isSpawnChunk = cx === 0 && cz === 0;
+  if (houseRoll > 0.45 || isSpawnChunk) {
+    const lx0 = 3 + Math.floor(Math.abs(noise.noise2d(cx * 1.7 + 50, cz * 1.7 + 50)) * (CHUNK_SIZE - 9));
+    const lz0 = 3 + Math.floor(Math.abs(noise.noise2d(cx * 2.3 + 50, cz * 2.3 + 50)) * (CHUNK_SIZE - 9));
+    const wx0 = cx * CHUNK_SIZE + lx0, wz0 = cz * CHUNK_SIZE + lz0;
+    const hA = getHeight(wx0, wz0);
+    const hB = getHeight(wx0 + 4, wz0 + 4);
+    const flat = Math.abs(hA - hB) <= (isSpawnChunk ? 3 : 2);
+    const goodGround = isSpawnChunk
+      ? (hA > 14 && hA < 60 && getRiverMask(wx0, wz0) < 0.95 && getRiverMask(wx0 + 4, wz0 + 4) < 0.95)
+      : (getBiome(wx0, wz0) === 'planície' && hA > 20 && hA < 46 &&
+         getRiverMask(wx0, wz0) < 0.92 && getRiverMask(wx0 + 4, wz0 + 4) < 0.92);
+    if (flat && goodGround) {
+      const styleRoll = noise.noise2d(cx * 3.1 + 7000, cz * 3.1 + 7000);
+      const style = styleRoll > 0 ? 'red' : 'wood';
+      const tv = placeHouse(data, idx, lx0, lz0, hA, style);
+      if (tv) {
+        housePositions.set(`${cx},${cz}`, {
+          wx: cx * CHUNK_SIZE + tv.lx,
+          wy: tv.ly,
+          wz: cz * CHUNK_SIZE + tv.lz,
+          yaw: tv.yaw,
+        });
+      }
+    }
+  }
+
+  return data;
+}
+
+// Casa simples 5x5 com porta, janelas e telhado saliente. O "style" troca a
+// paleta de cores: 'wood' = paredes de madeira/piso e telhado de tábuas
+// (clássica), 'red' = paredes de tijolo vermelho com telhado escuro.
+function placeHouse(data, idx, lx0, lz0, h, style = 'wood') {
+  const w = 5, d = 5, wallH = 3;
+  const wallBlock = style === 'red' ? BLOCK.BRICK_RED : BLOCK.WOOD;
+  const roofBlock = style === 'red' ? BLOCK.ROOF_DARK : BLOCK.PLANKS;
+  for (let dx = -1; dx <= w; dx++) {
+    for (let dz = -1; dz <= d; dz++) {
+      const lx = lx0 + dx, lz = lz0 + dz;
+      if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) return null; // não cabe — não construir
+    }
+  }
+
+  // Limpa o volume da casa (remove qualquer árvore/folha que esteja no caminho)
+  for (let dx = 0; dx < w; dx++)
+    for (let dz = 0; dz < d; dz++)
+      for (let wy = 1; wy <= wallH + 2; wy++)
+        if (h + wy < CHUNK_HEIGHT) data[idx(lx0 + dx, h + wy, lz0 + dz)] = BLOCK.AIR;
+
+  // Piso
+  for (let dx = 0; dx < w; dx++)
+    for (let dz = 0; dz < d; dz++)
+      data[idx(lx0 + dx, h, lz0 + dz)] = BLOCK.PLANKS;
+
+  // Paredes (com vão de porta na frente e janelas nas laterais)
+  for (let wy = 1; wy <= wallH; wy++) {
+    for (let dx = 0; dx < w; dx++) {
+      for (let dz = 0; dz < d; dz++) {
+        const isEdge = dx === 0 || dx === w - 1 || dz === 0 || dz === d - 1;
+        if (!isEdge) continue;
+        const isDoor = dz === 0 && dx === Math.floor(w / 2) && wy <= 2;
+        const isWindow = (dx === 0 || dx === w - 1) && dz === Math.floor(d / 2) && wy === 2;
+        if (isDoor || isWindow) continue;
+        if (h + wy < CHUNK_HEIGHT) data[idx(lx0 + dx, h + wy, lz0 + dz)] = wallBlock;
+      }
+    }
+  }
+
+  // Telhado (projeta 1 bloco além das paredes em todos os lados)
+  const roofY = h + wallH + 1;
+  if (roofY < CHUNK_HEIGHT) {
+    for (let dx = -1; dx <= w; dx++)
+      for (let dz = -1; dz <= d; dz++)
+        data[idx(lx0 + dx, roofY, lz0 + dz)] = roofBlock;
+  }
+
+  // Devolve onde pendurar a TV: parede do fundo (oposta à porta), de frente
+  // pra entrada, na altura dos olhos — encostada na face interna da parede.
+  return {
+    lx: lx0 + Math.floor(w / 2) + 0.5,
+    ly: h + 2,
+    lz: lz0 + (d - 1) - 0.52,
+    yaw: Math.PI,
+  };
+}
+
+function getBlock(data, lx, ly, lz) {
+  if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE)
+    return BLOCK.AIR;
+  return data[lx + CHUNK_SIZE * (ly + CHUNK_HEIGHT * lz)];
+}
+
+// Ambient occlusion (per-vertex) — darkens corners/edges where blocks meet,
+// the single biggest factor in making a voxel world look "solid" instead of flat.
+const AO_TANGENTS = { 0: [1, 2], 1: [0, 2], 2: [0, 1] }; // face normal axis -> the two tangent axes
+const AO_LEVELS = [0.45, 0.65, 0.82, 1.0]; // brightness for occlusion count 3,2,1,0
+
+// NOTE: uses world-space coordinates + getWorldBlock so AO reads correctly
+// across chunk borders (a chunk's own data alone can't see its neighbors).
+function calcAO(wx, wy, wz, norm, corner) {
+  let na, nd;
+  if (norm[0] !== 0) { na = 0; nd = norm[0]; }
+  else if (norm[1] !== 0) { na = 1; nd = norm[1]; }
+  else { na = 2; nd = norm[2]; }
+  const [ua, va] = AO_TANGENTS[na];
+  const tu = corner[ua] * 2 - 1;
+  const tv = corner[va] * 2 - 1;
+
+  const base = [wx, wy, wz];
+  const s1 = base.slice(); s1[na] += nd; s1[ua] += tu;
+  const s2 = base.slice(); s2[na] += nd; s2[va] += tv;
+  const cn = base.slice(); cn[na] += nd; cn[ua] += tu; cn[va] += tv;
+
+  const side1 = getWorldBlock(s1[0], s1[1], s1[2]) !== BLOCK.AIR ? 1 : 0;
+  const side2 = getWorldBlock(s2[0], s2[1], s2[2]) !== BLOCK.AIR ? 1 : 0;
+  const cornerB = getWorldBlock(cn[0], cn[1], cn[2]) !== BLOCK.AIR ? 1 : 0;
+
+  const occlusion = (side1 && side2) ? 3 : (side1 + side2 + cornerB);
+  return AO_LEVELS[3 - occlusion];
+}
+
+// Greedy meshing per block (simple version — face culling only)
+function buildChunkMesh(cx, cz, data) {
+  const geoms = new Map();
+  const positions = new Map(), normals = new Map(), colors = new Map(), indices = new Map(), counts = new Map();
+
+  const faces = [
+    { dir: [0,1,0], corners: [[0,1,1],[1,1,1],[1,1,0],[0,1,0]], norm: [0,1,0], face: 'top' },
+    { dir: [0,-1,0], corners: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]], norm: [0,-1,0], face: 'bottom' },
+    { dir: [0,0,1], corners: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]], norm: [0,0,1], face: 'side' },
+    { dir: [0,0,-1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]], norm: [0,0,-1], face: 'side' },
+    { dir: [1,0,0], corners: [[1,0,1],[1,0,0],[1,1,0],[1,1,1]], norm: [1,0,0], face: 'side' },
+    { dir: [-1,0,0], corners: [[0,0,0],[0,0,1],[0,1,1],[0,1,0]], norm: [-1,0,0], face: 'side' },
+  ];
+
+  const initKey = (key) => {
+    if (!positions.has(key)) {
+      positions.set(key, []);
+      normals.set(key, []);
+      colors.set(key, []);
+      indices.set(key, []);
+      counts.set(key, 0);
+    }
+  };
+
+  const wx = cx * CHUNK_SIZE, wz = cz * CHUNK_SIZE;
+
+  for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+    for (let ly = 0; ly < CHUNK_HEIGHT; ly++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const block = getBlock(data, lx, ly, lz);
+        if (block === BLOCK.AIR) continue;
+
+        const bwx = wx + lx, bwz = wz + lz;
+
+        for (const { dir, corners, norm, face } of faces) {
+          // Use world-space lookups (not chunk-local) so faces are culled
+          // correctly against already-loaded neighboring chunks too —
+          // otherwise borders can show gaps/overlaps and AO seams.
+          const neighbor = getWorldBlock(bwx + dir[0], ly + dir[1], bwz + dir[2]);
+          if (neighbor !== BLOCK.AIR) continue;
+
+          const key = `${block}_${face}`;
+          initKey(key);
+          const pos = positions.get(key);
+          const nor = normals.get(key);
+          const col = colors.get(key);
+          const ind = indices.get(key);
+          const c = counts.get(key);
+
+          const ao = corners.map(corner => calcAO(bwx, ly, bwz, norm, corner));
+          for (let i = 0; i < 4; i++) {
+            const [ox, oy, oz] = corners[i];
+            pos.push(bwx + ox, ly + oy, bwz + oz);
+            nor.push(...norm);
+            col.push(ao[i], ao[i], ao[i]);
+          }
+          // Pick the quad diagonal that runs through the less-occluded corners,
+          // so AO interpolation doesn't create a visible seam across the face.
+          if (ao[0] + ao[2] < ao[1] + ao[3]) {
+            ind.push(c, c+1, c+3, c+1, c+2, c+3);
+          } else {
+            ind.push(c, c+1, c+2, c, c+2, c+3);
+          }
+          counts.set(key, c + 4);
+        }
+      }
+    }
+  }
+
+  const meshes = [];
+  for (const [key, pos] of positions) {
+    if (pos.length === 0) continue;
+    const [blockType, face] = key.split('_');
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals.get(key), 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors.get(key), 3));
+    geo.setIndex(indices.get(key));
+    const mesh = new THREE.Mesh(geo, getBlockMaterial(parseInt(blockType), face));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    meshes.push(mesh);
+  }
+  return meshes;
+}
+
+const chunkData = new Map();
+
+function loadChunk(cx, cz) {
+  const key = `${cx},${cz}`;
+  if (chunks.has(key)) return;
+  const data = generateChunkData(cx, cz);
+  chunkData.set(key, data);
+  const meshes = buildChunkMesh(cx, cz, data);
+  const group = new THREE.Group();
+  meshes.forEach(m => group.add(m));
+  scene.add(group);
+  chunks.set(key, group);
+  trySpawnNearChunk(cx, cz);
+  trySpawnMonsterNearChunk(cx, cz);
+
+  const tvSpot = housePositions.get(key);
+  if (tvSpot) spawnRadio(key, tvSpot.wx, tvSpot.wy, tvSpot.wz, tvSpot.yaw);
+}
+
+function unloadChunk(cx, cz) {
+  const key = `${cx},${cz}`;
+  const group = chunks.get(key);
+  if (!group) return;
+  group.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+  });
+  scene.remove(group);
+  chunks.delete(key);
+  chunkData.delete(key);
+  removeRadio(key);
+}
+
+function updateChunks() {
+  const pcx = Math.floor(player.pos.x / CHUNK_SIZE);
+  const pcz = Math.floor(player.pos.z / CHUNK_SIZE);
+
+  for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
+    for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+      loadChunk(pcx + dx, pcz + dz);
+    }
+  }
+
+  for (const [key] of chunks) {
+    const [cx, cz] = key.split(',').map(Number);
+    if (Math.abs(cx - pcx) > RENDER_DISTANCE + 1 || Math.abs(cz - pcz) > RENDER_DISTANCE + 1) {
+      unloadChunk(cx, cz);
+    }
+  }
+}
+
+// Collision
+function getWorldBlock(wx, wy, wz) {
+  if (wy < 0 || wy >= CHUNK_HEIGHT) return wy < 0 ? BLOCK.STONE : BLOCK.AIR;
+  const cx = Math.floor(wx / CHUNK_SIZE);
+  const cz = Math.floor(wz / CHUNK_SIZE);
+  const key = `${cx},${cz}`;
+  const data = chunkData.get(key);
+  if (!data) return BLOCK.AIR;
+  const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const ly = Math.floor(wy);
+  return data[lx + CHUNK_SIZE * (ly + CHUNK_HEIGHT * lz)];
+}
+
+function isSolid(wx, wy, wz) {
+  const b = getWorldBlock(Math.floor(wx), wy, Math.floor(wz));
+  return b !== BLOCK.AIR;
+}
+
+// Raycast
+function raycast(origin, dir, maxDist) {
+  const step = 0.05;
+  const pos = origin.clone();
+  let last = null;
+  for (let d = 0; d < maxDist; d += step) {
+    pos.addScaledVector(dir, step);
+    const bx = Math.floor(pos.x), by = Math.floor(pos.y), bz = Math.floor(pos.z);
+    if (isSolid(bx, by, bz)) {
+      return { hit: true, bx, by, bz, prev: last };
+    }
+    last = { bx: Math.floor(pos.x), by: Math.floor(pos.y), bz: Math.floor(pos.z) };
+  }
+  return { hit: false };
+}
+
+function rebuildChunk(cx, cz) {
+  const key = `${cx},${cz}`;
+  const data = chunkData.get(key);
+  const group = chunks.get(key);
+  if (!data || !group) return;
+  group.traverse(obj => { if (obj.geometry) obj.geometry.dispose(); });
+  scene.remove(group);
+  chunks.delete(key);
+  const meshes = buildChunkMesh(cx, cz, data);
+  const newGroup = new THREE.Group();
+  meshes.forEach(m => newGroup.add(m));
+  scene.add(newGroup);
+  chunks.set(key, newGroup);
+}
+
+function setBlock(wx, wy, wz, type) {
+  const cx = Math.floor(wx / CHUNK_SIZE);
+  const cz = Math.floor(wz / CHUNK_SIZE);
+  const key = `${cx},${cz}`;
+  const data = chunkData.get(key);
+  if (!data) return;
+  const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const ly = Math.floor(wy);
+  data[lx + CHUNK_SIZE * (ly + CHUNK_HEIGHT * lz)] = type;
+
+  // Rebuild this chunk, plus any neighbor whose border faces/AO depend on
+  // this block (face culling & AO now look across chunk borders).
+  rebuildChunk(cx, cz);
+  if (lx === 0) rebuildChunk(cx - 1, cz);
+  if (lx === CHUNK_SIZE - 1) rebuildChunk(cx + 1, cz);
+  if (lz === 0) rebuildChunk(cx, cz - 1);
+  if (lz === CHUNK_SIZE - 1) rebuildChunk(cx, cz + 1);
+}
+
+// ============================================================
+//  DROPPED ITEMS (items no chão que podem ser coletados)
+// ============================================================
+const droppedItems = [];
+
+function spawnDroppedItem(itemId, count, wx, wy, wz) {
+  const info = ITEM_INFO[itemId];
+  if (!info) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '48px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(info.icon, 32, 32);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: texture });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.5, 0.5, 1);
+  sprite.position.set(wx, wy, wz);
+  scene.add(sprite);
+
+  droppedItems.push({
+    id: itemId,
+    count,
+    pos: sprite.position,
+    sprite,
+    vel: new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      3 + Math.random() * 2,
+      (Math.random() - 0.5) * 2
+    ),
+    age: 0,
+    bobPhase: Math.random() * Math.PI * 2
+  });
+}
+
+function updateDroppedItems(dt) {
+  for (let i = droppedItems.length - 1; i >= 0; i--) {
+    const item = droppedItems[i];
+    item.age += dt;
+
+    // Despawn após 5 minutos
+    if (item.age > 300) {
+      scene.remove(item.sprite);
+      item.sprite.material.map.dispose();
+      item.sprite.material.dispose();
+      droppedItems.splice(i, 1);
+      continue;
+    }
+
+    // Física básica
+    item.vel.y -= 20 * dt;
+    item.pos.x += item.vel.x * dt;
+    item.pos.y += item.vel.y * dt;
+    item.pos.z += item.vel.z * dt;
+
+    // Colisão com o chão
+    const groundY = Math.floor(item.pos.y);
+    if (isSolid(item.pos.x, groundY, item.pos.z)) {
+      item.pos.y = groundY + 1.2;
+      item.vel.y = 0;
+      item.vel.x *= 0.8;
+      item.vel.z *= 0.8;
+    }
+
+    // Animação de flutuação
+    item.bobPhase += dt * 3;
+    item.sprite.position.y = item.pos.y + Math.sin(item.bobPhase) * 0.08;
+
+    // Coleta automática ao passar perto
+    const dist = item.pos.distanceTo(player.pos);
+    if (dist < 1.5) {
+      const leftover = addItemToInventory(item.id, item.count);
+      if (leftover === 0) {
+        scene.remove(item.sprite);
+        item.sprite.material.map.dispose();
+        item.sprite.material.dispose();
+        droppedItems.splice(i, 1);
+      } else {
+        item.count = leftover;
+      }
+    }
+  }
+}
+
+// ============================================================
+//  MOBS (animais / criaturas)
+// ============================================================
+const mobs = [];
+const MAX_COWS = 12;
+const COW_SPAWN_CHANCE = 0.35; // per loaded chunk
+const MAX_DINOS = 6;
+const DINO_SPAWN_CHANCE = 0.22;
+
+function makeCowMesh() {
+  const group = new THREE.Group();
+  const hideMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const spotMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1d });
+  const legMat  = new THREE.MeshLambertMaterial({ color: 0xe8e0d5 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 1.4), hideMat);
+  body.position.y = 0.85;
+  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.36, 0.7), spotMat);
+  patch.position.set(0, 1.0, -0.2);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), spotMat);
+  head.position.set(0, 0.95, 0.95);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.22, 0.18), new THREE.MeshLambertMaterial({ color: 0xe8c0a8 }));
+  snout.position.set(0, 0.8, 1.18);
+
+  const legGeo = new THREE.BoxGeometry(0.22, 0.55, 0.22);
+  const legs = [];
+  for (const [lx, lz] of [[-0.3, -0.5], [0.3, -0.5], [-0.3, 0.5], [0.3, 0.5]]) {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(lx, 0.27, lz);
+    legs.push(leg);
+    group.add(leg);
+  }
+  group.add(body, patch, head, snout);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  group.userData.legs = legs;
+  group.userData.head = head;
+  return group;
+}
+
+function spawnCow(wx, wz) {
+  if (mobs.length >= MAX_COWS) return;
+  const h = getHeight(wx, wz);
+  // só nasce em cima de grama — naturalmente evita desertos (areia) e montanhas nevadas
+  if (getWorldBlock(wx, h, wz) !== BLOCK.GRASS) return;
+  const mesh = makeCowMesh();
+  mesh.position.set(wx + 0.5, h + 1, wz + 0.5);
+  scene.add(mesh);
+  mobs.push({
+    type: 'cow',
+    mesh,
+    pos: mesh.position,
+    vel: new THREE.Vector3(),
+    yaw: Math.random() * Math.PI * 2,
+    hp: 10, maxHp: 10,
+    wanderTimer: Math.random() * 4,
+    walkPhase: Math.random() * 10,
+    onGround: false,
+    dead: false,
+    hitFlashTimer: 0,
+  });
+}
+
+function trySpawnNearChunk(cx, cz) {
+  if (Math.random() < COW_SPAWN_CHANCE) {
+    const lx = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+    const lz = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+    spawnCow(cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz);
+  }
+  if (Math.random() < DINO_SPAWN_CHANCE) {
+    const lx = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+    const lz = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+    spawnDino(cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz);
+  }
+}
+
+// ============================================================
+//  DINOSSAUROS — montáveis e voadores!
+// ============================================================
+function makeDinoMesh() {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x2d8a4d });
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffdd44 });
+  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x1f6638 });
+
+  // Corpo principal
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.2, 2.2), bodyMat);
+  body.position.y = 1.6;
+
+  // Cabeça
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.8), bodyMat);
+  head.position.set(0, 1.8, 1.5);
+
+  // Focinho/bico
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), scaleMat);
+  snout.position.set(0, 1.7, 1.95);
+
+  // Olhos
+  const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-0.25, 1.9, 1.8);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(0.25, 1.9, 1.8);
+
+  // Cauda
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 1.3), bodyMat);
+  tail.position.set(0, 1.3, -1.5);
+
+  // Pernas
+  const legGeo = new THREE.BoxGeometry(0.35, 1.1, 0.35);
+  const legs = [];
+  for (const [lx, lz] of [[-0.5, -0.7], [0.5, -0.7], [-0.5, 0.7], [0.5, 0.7]]) {
+    const leg = new THREE.Mesh(legGeo, scaleMat);
+    leg.position.set(lx, 0.55, lz);
+    legs.push(leg);
+    group.add(leg);
+  }
+
+  // Asas — grandes asas de pterodáctilo para voar!
+  const wingMat = new THREE.MeshLambertMaterial({ color: 0x3da85f, side: THREE.DoubleSide });
+  const wingL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 1.4), wingMat);
+  wingL.position.set(-0.9, 1.8, 0);
+  wingL.rotation.z = 0.3;
+  const wingR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 1.4), wingMat);
+  wingR.position.set(0.9, 1.8, 0);
+  wingR.rotation.z = -0.3;
+
+  group.add(body, head, snout, eyeL, eyeR, tail, wingL, wingR);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+  group.userData.legs = legs;
+  group.userData.head = head;
+  group.userData.wingL = wingL;
+  group.userData.wingR = wingR;
+  return group;
+}
+
+function spawnDino(wx, wz) {
+  if (mobs.filter(m => m.type === 'dino').length >= MAX_DINOS) return;
+  const h = getHeight(wx, wz);
+  if (getWorldBlock(wx, h, wz) !== BLOCK.GRASS) return;
+
+  const mesh = makeDinoMesh();
+  mesh.position.set(wx + 0.5, h + 1, wz + 0.5);
+  scene.add(mesh);
+
+  mobs.push({
+    type: 'dino',
+    mesh,
+    pos: mesh.position,
+    vel: new THREE.Vector3(),
+    yaw: Math.random() * Math.PI * 2,
+    hp: 30, maxHp: 30,
+    wanderTimer: Math.random() * 4,
+    walkPhase: Math.random() * 10,
+    wingPhase: 0,
+    onGround: false,
+    dead: false,
+    hitFlashTimer: 0,
+    rider: null,  // quem está montado
+    tamed: false
+  });
+}
+
+function mobIsSolidBelow(pos) {
+  return isSolid(pos.x, pos.y - 0.05, pos.z);
+}
+
+function updateMobs(dt) {
+  for (let i = mobs.length - 1; i >= 0; i--) {
+    const m = mobs[i];
+    if (m.dead) continue;
+
+    // Despawn if very far from player (keeps things cheap)
+    const dx = m.pos.x - player.pos.x, dz = m.pos.z - player.pos.z;
+    if (dx * dx + dz * dz > 80 * 80) {
+      scene.remove(m.mesh);
+      mobs.splice(i, 1);
+      continue;
+    }
+
+    if (m.hitFlashTimer > 0) m.hitFlashTimer -= dt;
+    if (m.attackCooldown > 0) m.attackCooldown -= dt;
+
+    const distToPlayerSq = dx * dx + dz * dz;
+
+    if (m.type === 'zombie' && distToPlayerSq < 14 * 14 && distToPlayerSq > 0.01) {
+      // Hostile AI: chase the player directly and attack on contact
+      m.wanderTimer = 0.4;
+      m.yaw = Math.atan2(dx, dz);
+      const speed = 1.7;
+      m.vel.x = -Math.sin(m.yaw) * speed;
+      m.vel.z = -Math.cos(m.yaw) * speed;
+
+      if (distToPlayerSq < 1.6 * 1.6 && m.attackCooldown <= 0) {
+        m.attackCooldown = 1.0;
+        damagePlayer(2);
+      }
+    } else {
+      // Passive wander AI: pick a new direction every few seconds
+      m.wanderTimer -= dt;
+      if (m.wanderTimer <= 0) {
+        m.wanderTimer = 2 + Math.random() * 4;
+        if (Math.random() < 0.35) {
+          m.vel.set(0, m.vel.y, 0); // pause
+        } else {
+          m.yaw += (Math.random() - 0.5) * Math.PI;
+          const speed = m.type === 'zombie' ? 1.3 : 1.1;
+          m.vel.x = -Math.sin(m.yaw) * speed;
+          m.vel.z = -Math.cos(m.yaw) * speed;
+        }
+      }
+    }
+
+    // Gravity
+    m.vel.y -= 20 * dt;
+    if (m.vel.y < -20) m.vel.y = -20;
+
+    // Move with simple per-axis collision against the world
+    const r = 0.4;
+    let nx = m.pos.x + m.vel.x * dt;
+    if (!isSolid(nx + Math.sign(m.vel.x) * r, m.pos.y + 0.2, m.pos.z) && !isSolid(nx + Math.sign(m.vel.x) * r, m.pos.y + 0.9, m.pos.z)) {
+      m.pos.x = nx;
+    } else { m.vel.x = 0; m.yaw += Math.PI / 2; }
+
+    let nz = m.pos.z + m.vel.z * dt;
+    if (!isSolid(m.pos.x, m.pos.y + 0.2, nz + Math.sign(m.vel.z) * r) && !isSolid(m.pos.x, m.pos.y + 0.9, nz + Math.sign(m.vel.z) * r)) {
+      m.pos.z = nz;
+    } else { m.vel.z = 0; m.yaw += Math.PI / 2; }
+
+    let ny = m.pos.y + m.vel.y * dt;
+    if (isSolid(m.pos.x, ny, m.pos.z)) {
+      if (m.vel.y < 0) { m.onGround = true; ny = Math.ceil(ny); }
+      m.vel.y = 0;
+    } else {
+      m.onGround = false;
+    }
+    m.pos.y = ny;
+
+    // Lógica específica do dinossauro
+    if (m.type === 'dino') {
+      // Se tem alguém montado, move junto com o rider
+      if (m.rider) {
+        const moving = Math.abs(m.vel.x) + Math.abs(m.vel.z) > 0.05;
+        if (moving) m.walkPhase += dt * 6;
+        m.wingPhase += dt * 8;
+        const wingL = m.mesh.userData.wingL;
+        const wingR = m.mesh.userData.wingR;
+        if (wingL && wingR) {
+          const flapAngle = Math.sin(m.wingPhase) * 0.6;
+          wingL.rotation.z = 0.3 + flapAngle;
+          wingR.rotation.z = -0.3 - flapAngle;
+        }
+      }
+    }
+
+    // Walk animation (legs swing while moving)
+    const moving = Math.abs(m.vel.x) + Math.abs(m.vel.z) > 0.05;
+    if (moving) m.walkPhase += dt * 6;
+    const legs = m.mesh.userData.legs;
+    if (legs) {
+      for (let li = 0; li < legs.length; li++) {
+        legs[li].rotation.x = moving ? Math.sin(m.walkPhase + (li % 2 === 0 ? 0 : Math.PI)) * 0.5 : 0;
+      }
+    }
+
+    m.mesh.position.copy(m.pos);
+    m.mesh.rotation.y = m.yaw;
+
+    // Hit flash (white -> reddish tint while recently damaged)
+    m.mesh.traverse(o => {
+      if (o.isMesh) o.material.emissive && o.material.emissive.setRGB(m.hitFlashTimer > 0 ? 0.6 : 0, 0, 0);
+    });
+  }
+}
+
+// Returns the closest mob within range whose center is near the aim ray, or null
+function pickMobInSight(origin, dir, maxDist) {
+  let best = null, bestDist = maxDist;
+  for (const m of mobs) {
+    if (m.dead) continue;
+    const center = m.pos.clone().add(new THREE.Vector3(0, 0.6, 0));
+    const toMob = center.clone().sub(origin);
+    const dist = toMob.length();
+    if (dist > maxDist) continue;
+    const along = toMob.dot(dir);
+    if (along <= 0) continue;
+    const closest = origin.clone().addScaledVector(dir, along);
+    const perpDist = closest.distanceTo(center);
+    if (perpDist < 0.8 && along < bestDist) {
+      best = m;
+      bestDist = along;
+    }
+  }
+  return best;
+}
+
+function damageMob(mob, amount) {
+  mob.hp -= amount;
+  mob.hitFlashTimer = 0.15;
+  // Knockback away from the player
+  const away = mob.pos.clone().sub(player.pos);
+  away.y = 0;
+  if (away.lengthSq() > 0.0001) {
+    away.normalize();
+    mob.vel.x += away.x * 3;
+    mob.vel.z += away.z * 3;
+    mob.vel.y = 4;
+  }
+  if (mob.hp <= 0 && !mob.dead) {
+    mob.dead = true;
+    scene.remove(mob.mesh);
+    const idx = mobs.indexOf(mob);
+    if (idx >= 0) mobs.splice(idx, 1);
+    // Dropar items no chão quando morrer
+    if (mob.type === 'cow') {
+      const beefCount = 1 + Math.floor(Math.random() * 2);
+      spawnDroppedItem(ITEM.RAW_BEEF, beefCount, mob.pos.x, mob.pos.y + 0.5, mob.pos.z);
+    }
+  }
+}
+
+// ============================================================
+//  MONSTERS (zumbis hostis)
+// ============================================================
+const MAX_ZOMBIES = 8;
+const ZOMBIE_SPAWN_CHANCE = 0.18;
+
+function makeZombieMesh() {
+  const group = new THREE.Group();
+  const skinMat  = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  const shirtMat = new THREE.MeshLambertMaterial({ color: 0x141414 });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x0a0a0a });
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
+  head.position.set(0, 1.65, 0);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.3), shirtMat);
+  body.position.set(0, 1.15, 0);
+
+  const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+  const legGeo = new THREE.BoxGeometry(0.22, 0.75, 0.22);
+  const arms = [], legs = [];
+  for (const sx of [-1, 1]) {
+    const arm = new THREE.Mesh(armGeo, skinMat);
+    arm.position.set(sx * 0.35, 1.18, 0);
+    arms.push(arm);
+    group.add(arm);
+  }
+  for (const sx of [-1, 1]) {
+    const leg = new THREE.Mesh(legGeo, pantsMat);
+    leg.position.set(sx * 0.14, 0.4, 0);
+    legs.push(leg);
+    group.add(leg);
+  }
+  group.add(head, body);
+  group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  group.userData.legs = legs;
+  group.userData.arms = arms;
+  group.userData.head = head;
+  return group;
+}
+
+function spawnZombie(wx, wz) {
+  if (mobs.filter(m => m.type === 'zombie').length >= MAX_ZOMBIES) return;
+  const h = getHeight(wx, wz);
+  const ground = getWorldBlock(wx, h, wz);
+  if (ground === BLOCK.AIR || ground === BLOCK.WATER) return;
+  const mesh = makeZombieMesh();
+  mesh.position.set(wx + 0.5, h + 1, wz + 0.5);
+  scene.add(mesh);
+  mobs.push({
+    type: 'zombie',
+    mesh,
+    pos: mesh.position,
+    vel: new THREE.Vector3(),
+    yaw: Math.random() * Math.PI * 2,
+    hp: 14, maxHp: 14,
+    wanderTimer: Math.random() * 3,
+    walkPhase: Math.random() * 10,
+    onGround: false,
+    dead: false,
+    hitFlashTimer: 0,
+    attackCooldown: 0,
+  });
+}
+
+function trySpawnMonsterNearChunk(cx, cz) {
+  if (Math.random() > ZOMBIE_SPAWN_CHANCE) return;
+  const lx = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+  const lz = 2 + Math.floor(Math.random() * (CHUNK_SIZE - 4));
+  spawnZombie(cx * CHUNK_SIZE + lx, cz * CHUNK_SIZE + lz);
+}
+
+//------------------------------------------------------------
+//  TV / RÁDIO — uma TV pendurada na parede de cada casa pronta,
+//  que toca a Login FM (canal Hits) ao vivo quando o jogador clica nela.
+//
+//  Não dá pra "abrir o site" de verdade dentro de uma textura do WebGL
+//  (o navegador bloqueia isso por segurança/CORS, e o site não libera
+//  embed via iframe), então a tela mostra um painel ao vivo da rádio
+//  — logo, canal e um equalizador animado — e o áudio de verdade é o
+//  stream oficial da Login FM.
+//------------------------------------------------------------
+const RADIO_STREAM_URL = 'https://player.radiologinfm.com/listen/loginfm_hits_2/radio.mp3';
+const radios = new Map(); // chunkKey -> { mesh, canvas, ctx, texture, audio, playing, pos, t }
+
+// Volume — afeta todas as TVs/telões da Login FM ao mesmo tempo (controle global em [ e ])
+let radioVolume = 0.3;
+function setRadioVolume(v) {
+  radioVolume = Math.max(0, Math.min(1, v));
+  for (const radio of radios.values()) {
+    if (radio.audio) radio.audio.volume = radioVolume;
+  }
+  const el = document.getElementById('radio-volume-display');
+  if (el) el.textContent = `${Math.round(radioVolume * 100)}%`;
+}
+
+// "Tocando agora" — busca artista/música na API now-playing da Login FM
+// (AzuraCast). Atualiza periodicamente e redesenha as telas com o resultado.
+const NOWPLAYING_SHORTCODE = 'loginfm_hits_2';
+const NOWPLAYING_API_URL = `https://player.radiologinfm.com/api/nowplaying_static/${NOWPLAYING_SHORTCODE}.json`;
+const NOWPLAYING_POLL_INTERVAL = 20; // segundos entre consultas
+let nowPlayingInfo = null; // { artist, title }
+let nowPlayingTimer = NOWPLAYING_POLL_INTERVAL; // dispara a primeira busca já no início
+
+async function fetchNowPlaying() {
+  try {
+    const res = await fetch(NOWPLAYING_API_URL);
+    if (!res.ok) return;
+    const data = await res.json();
+    const song = data && data.now_playing && data.now_playing.song;
+    if (song && (song.artist || song.title)) {
+      nowPlayingInfo = { artist: song.artist || '', title: song.title || song.text || '' };
+      for (const radio of radios.values()) drawRadioScreen(radio);
+    }
+  } catch (err) {
+    console.warn('Não consegui buscar "tocando agora" da Login FM:', err);
+  }
+}
+
+function drawRadioScreen(radio) {
+  const { ctx, canvas, playing } = radio;
+  const w = canvas.width, h = canvas.height;
+  // Fator de escala — assim o mesmo desenho funciona tanto na TV pequena
+  // (canvas 256x160) quanto no telão gigante (canvas maior, mesma proporção)
+  const s = w / 256;
+
+  ctx.fillStyle = '#0a0d12';
+  ctx.fillRect(0, 0, w, h);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, playing ? '#1c2e4a' : '#13171f');
+  grad.addColorStop(1, '#05070a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(6 * s, 6 * s, w - 12 * s, h - 12 * s);
+
+  ctx.fillStyle = '#4df0c0';
+  ctx.font = `bold ${34 * s}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('LOGIN FM', w / 2, 56 * s);
+
+  ctx.fillStyle = '#cdd6e0';
+  ctx.font = `${17 * s}px sans-serif`;
+  ctx.fillText('canal • HITS', w / 2, 82 * s);
+
+  // Tocando agora — artista e música, vindos da API now-playing da rádio
+  if (nowPlayingInfo && (nowPlayingInfo.artist || nowPlayingInfo.title)) {
+    const full = [nowPlayingInfo.artist, nowPlayingInfo.title].filter(Boolean).join(' — ');
+    let label = full;
+    ctx.font = `${15 * s}px sans-serif`;
+    const maxWidth = w - 48 * s;
+    while (ctx.measureText(label).width > maxWidth && label.length > 4) label = label.slice(0, -2);
+    if (label !== full) label += '…';
+    ctx.fillStyle = playing ? '#ffd27a' : '#7c8694';
+    ctx.fillText(label, w / 2, 104 * s);
+  }
+
+  // Equalizador — só "dança" quando está tocando (logo abaixo do "tocando agora")
+  const bars = 14;
+  const baseX = 26 * s, gap = (w - 52 * s) / bars;
+  for (let i = 0; i < bars; i++) {
+    const t = playing ? (Math.sin(radio.t * 6 + i * 0.85) * 0.5 + 0.5) : 0.06;
+    const bh = (4 + t * 18) * s;
+    ctx.fillStyle = playing ? '#4df0c0' : '#33414f';
+    ctx.fillRect(baseX + i * gap, h - 28 * s - bh, gap * 0.62, bh);
+  }
+
+  ctx.fillStyle = playing ? '#ff5b5b' : '#5a6675';
+  ctx.beginPath();
+  ctx.arc(26 * s, 26 * s, 7 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#9aa7b5';
+  ctx.font = `${14 * s}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(playing ? 'AO VIVO' : 'clique para ouvir', 40 * s, 31 * s);
+
+  radio.texture.needsUpdate = true;
+  if (radio.glowLight) radio.glowLight.intensity = playing ? 1.3 : 0;
+}
+
+function makeRadioMesh(radio) {
+  const group = new THREE.Group();
+
+  const frameMat = new THREE.MeshLambertMaterial({ color: 0x1b1f26 });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.05, 0.1), frameMat);
+  group.add(frame);
+
+  const screenMat = new THREE.MeshBasicMaterial({ map: radio.texture });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.86), screenMat);
+  screen.position.z = 0.056;
+  group.add(screen);
+
+  const bracketMat = new THREE.MeshLambertMaterial({ color: 0x12151a });
+  const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.16), bracketMat);
+  bracket.position.set(0, 0, -0.1);
+  group.add(bracket);
+
+  return group;
+}
+
+function spawnRadio(key, wx, wy, wz, yaw) {
+  if (radios.has(key)) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+
+  const radio = {
+    canvas, ctx, texture,
+    audio: null, playing: false, t: 0,
+    pos: new THREE.Vector3(wx, wy, wz),
+  };
+  drawRadioScreen(radio);
+
+  const mesh = makeRadioMesh(radio);
+  mesh.position.set(wx, wy, wz);
+  mesh.rotation.y = yaw;
+  scene.add(mesh);
+  radio.mesh = mesh;
+
+  radios.set(key, radio);
+}
+
+function removeRadio(key) {
+  const radio = radios.get(key);
+  if (!radio) return;
+  if (radio.audio) { radio.audio.pause(); radio.audio.src = ''; }
+  scene.remove(radio.mesh);
+  radio.mesh.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+  radio.texture.dispose();
+  radios.delete(key);
+}
+
+// Avisa o site (caso o jogo esteja embutido num <iframe>, ex: radiologinfm.com)
+// que a rádio começou/parou de tocar dentro do jogo — assim o site pode
+// pausar a própria rádio e evitar tocar duas vezes ao mesmo tempo.
+function notifyParentRadioState(isPlaying) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ source: 'world-top-game', type: isPlaying ? 'radio-playing' : 'radio-stopped' }, '*');
+    }
+  } catch (err) {}
+}
+
+function toggleRadio(radio) {
+  if (radio.playing) {
+    if (radio.audio) radio.audio.pause();
+    radio.playing = false;
+  } else {
+    if (!radio.audio) {
+      radio.audio = new Audio(RADIO_STREAM_URL);
+      radio.audio.loop = true;
+      radio.audio.volume = radioVolume;
+    }
+    radio.audio.play().catch(err => console.warn('Não rolou tocar a Login FM:', err));
+    radio.playing = true;
+  }
+  notifyParentRadioState(radio.playing);
+  drawRadioScreen(radio);
+}
+
+function pickRadioInSight(origin, dir) {
+  let best = null, bestAlong = Infinity;
+  for (const radio of radios.values()) {
+    const maxDist = radio.reach != null ? radio.reach : 3.5;
+    const hitRadius = radio.hitRadius != null ? radio.hitRadius : 0.95;
+    const toR = radio.pos.clone().sub(origin);
+    const along = toR.dot(dir);
+    if (along <= 0 || along > maxDist || along > bestAlong) continue;
+    const closest = origin.clone().addScaledVector(dir, along);
+    if (closest.distanceTo(radio.pos) < hitRadius) {
+      best = radio;
+      bestAlong = along;
+    }
+  }
+  return best;
+}
+
+function updateRadios(dt) {
+  nowPlayingTimer += dt;
+  if (nowPlayingTimer >= NOWPLAYING_POLL_INTERVAL) {
+    nowPlayingTimer = 0;
+    fetchNowPlaying();
+  }
+  for (const radio of radios.values()) {
+    if (radio.playing) {
+      radio.t += dt;
+      drawRadioScreen(radio);
+    }
+  }
+}
+
+// Telão gigante — um painel da Login FM bem grande, montado numa torre
+// perto do spawn, visível de longe "no horizonte". Mesma técnica da TV
+// (textura desenhada num canvas, áudio real do stream), só que enorme.
+function makeBillboardMesh(radio) {
+  const group = new THREE.Group();
+
+  const legMat = new THREE.MeshLambertMaterial({ color: 0x2b2f36 });
+  const legGeo = new THREE.BoxGeometry(0.5, 13, 0.5);
+  for (const [ox, oz] of [[-2.7, -1.4], [2.7, -1.4], [-2.7, 1.4], [2.7, 1.4]]) {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(ox, 6.5, oz);
+    group.add(leg);
+  }
+  const crossMat = new THREE.MeshLambertMaterial({ color: 0x21242b });
+  for (const oy of [3, 7, 11]) {
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.25, 0.25), crossMat);
+    cross.position.set(0, oy, 0);
+    group.add(cross);
+  }
+
+  const frameMat = new THREE.MeshLambertMaterial({ color: 0x12151a });
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(7.6, 4.4, 0.5), frameMat);
+  frame.position.set(0, 13.6, 0);
+  group.add(frame);
+
+  const screenMat = new THREE.MeshBasicMaterial({ map: radio.texture });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.8), screenMat);
+  screen.position.set(0, 13.6, 0.27);
+  group.add(screen);
+
+  // Brilho próprio — o telão "acende" quando está ao vivo, dá pra ver de longe à noite
+  const glow = new THREE.PointLight(0x4df0c0, 0, 22);
+  glow.position.set(0, 13.6, 2);
+  group.add(glow);
+  radio.glowLight = glow;
+
+  return group;
+}
+
+function spawnBillboard() {
+  const wx = 8 + 50, wz = 8 + 18;
+  const h = getHeight(wx, wz);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 320; // mesma proporção da TV (256x160), em resolução maior
+  const ctx = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+
+  const radio = {
+    canvas, ctx, texture,
+    audio: null, playing: false, t: 0,
+    pos: new THREE.Vector3(wx + 0.5, h + 13.6, wz + 0.5),
+    reach: 16, hitRadius: 3.4,
+  };
+  drawRadioScreen(radio);
+
+  const mesh = makeBillboardMesh(radio);
+  mesh.position.set(wx + 0.5, h, wz + 0.5);
+  // Vira a tela de frente pro spawn, pra quem chega já avistar o telão
+  mesh.rotation.y = Math.atan2(8 - (wx + 0.5), 8 - (wz + 0.5));
+  scene.add(mesh);
+  radio.mesh = mesh;
+
+  radios.set('billboard', radio);
+}
+
+// ============================================================
+//  PLAYER HEALTH
+// ============================================================
+function updateHealthHUD() {
+  const el = document.getElementById('hp-display');
+  if (el) el.textContent = `${Math.max(0, Math.ceil(player.hp))}/${player.maxHp} ❤️`;
+}
+
+function damagePlayer(amount) {
+  if (player.invuln > 0 || player.hp <= 0) return;
+  player.hp = Math.max(0, player.hp - amount);
+  player.invuln = 0.6;
+  updateHealthHUD();
+  const flash = document.getElementById('damage-flash');
+  if (flash) {
+    flash.style.opacity = '1';
+    setTimeout(() => { flash.style.opacity = '0'; }, 150);
+  }
+  if (player.hp <= 0) showGameOver();
+}
+
+function showGameOver() {
+  if (isMobile) pointerLocked = false;
+  else document.exitPointerLock();
+  const el = document.getElementById('gameover-overlay');
+  if (el) el.classList.remove('hidden');
+}
+
+function restartGame() {
+  const el = document.getElementById('gameover-overlay');
+  if (el) el.classList.add('hidden');
+
+  // Desmontar do dinossauro se estava montado
+  if (player.ridingDino) {
+    player.ridingDino.rider = null;
+    player.ridingDino = null;
+  }
+
+  player.hp = player.maxHp;
+  player.vel.set(0, 0, 0);
+  const spawnH = getHeight(8, 8) + 3;
+  player.pos.set(8, spawnH, 8);
+  player.invuln = 1.5;
+  player.flying = false;
+  updateHealthHUD();
+
+  if (isMobile) pointerLocked = true;
+  else renderer.domElement.requestPointerLock();
+}
+
+// ============================================================
+//  FIRST-PERSON HAND (braço + item segurado)
+// ============================================================
+let handGroup, heldItemGroup, armMesh;
+let lastHeldItemId;
+let handBobTime = 0, handSwing = 0;
+
+function setupHand() {
+  handGroup = new THREE.Group();
+
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xd9a066 });
+  const sleeveMat = new THREE.MeshLambertMaterial({ color: 0x4d6a8f });
+  armMesh = new THREE.Group();
+  const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 0.22), skinMat);
+  forearm.position.set(0, -0.16, 0);
+  const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.2, 0.24), sleeveMat);
+  sleeve.position.set(0, 0.08, 0);
+  armMesh.add(sleeve, forearm);
+  armMesh.position.set(0.5, -0.55, -0.65);
+  armMesh.rotation.set(0.55, -0.2, 0.45);
+  handGroup.add(armMesh);
+
+  heldItemGroup = new THREE.Group();
+  heldItemGroup.position.set(0.46, -0.05, -0.18);
+  heldItemGroup.rotation.set(0.25, 0.6, 0.1);
+  armMesh.add(heldItemGroup);
+
+  handGroup.traverse(o => {
+    if (o.isMesh) {
+      o.material.depthTest = false;
+      o.material.depthWrite = false;
+      o.renderOrder = 999;
+      o.frustumCulled = false;
+      o.castShadow = false;
+      o.receiveShadow = false;
+    }
+  });
+
+  scene.add(camera);
+  camera.add(handGroup);
+}
+
+function rebuildHeldItem(itemId) {
+  while (heldItemGroup.children.length) {
+    const c = heldItemGroup.children.pop();
+    c.geometry.dispose();
+    c.material.dispose();
+  }
+  if (itemId == null) return;
+  const info = ITEM_INFO[itemId];
+  if (!info) return;
+
+  let parts = [];
+  if (info.tool === 'sword') {
+    const bladeMat = new THREE.MeshLambertMaterial({ color: 0xd6dde4 });
+    const guardMat = new THREE.MeshLambertMaterial({ color: 0x8a6a3a });
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x5a3c22 });
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.05), bladeMat);
+    blade.position.set(0, 0.4, 0);
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.06), guardMat);
+    guard.position.set(0, 0.13, 0);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.07), handleMat);
+    handle.position.set(0, 0, 0);
+    parts = [blade, guard, handle];
+  } else if (info.block != null) {
+    const colors = BLOCK_COLORS[info.block] || [0xffffff, 0xffffff];
+    const mat = new THREE.MeshLambertMaterial({ color: colors[1] });
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), mat);
+    parts = [cube];
+  } else {
+    const mat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+    const lump = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), mat);
+    parts = [lump];
+  }
+
+  for (const p of parts) {
+    p.material.depthTest = false;
+    p.material.depthWrite = false;
+    p.renderOrder = 999;
+    p.frustumCulled = false;
+    heldItemGroup.add(p);
+  }
+}
+
+function updateHand(dt) {
+  if (!handGroup) return;
+
+  const slot = inventory[player.selectedSlot];
+  const id = slot ? slot.id : null;
+  if (id !== lastHeldItemId) {
+    rebuildHeldItem(id);
+    lastHeldItemId = id;
+  }
+
+  const horizSpeed = Math.hypot(player.vel.x, player.vel.z);
+  const moving = horizSpeed > 0.6 && player.onGround;
+  handBobTime += dt * (moving ? 9 : 1.6);
+  const bobX = Math.sin(handBobTime) * (moving ? 0.025 : 0.006);
+  const bobY = Math.abs(Math.cos(handBobTime)) * (moving ? 0.025 : 0.005);
+
+  if (handSwing > 0) handSwing = Math.max(0, handSwing - dt * 6);
+  const swing = Math.sin(handSwing * Math.PI) * (handSwing > 0 ? 1 : 0);
+
+  handGroup.position.set(bobX, bobY, 0);
+  armMesh.rotation.set(0.55 - swing * 0.9, -0.2 + swing * 0.5, 0.45 - swing * 0.25);
+  armMesh.position.set(0.5 - swing * 0.12, -0.55 + swing * 0.08, -0.65 - swing * 0.18);
+}
+
+function swingHand() {
+  handSwing = 1;
+}
+
+// Sky / lighting
+let sunLight, ambientLight, hemiLight, skyMesh;
+function setupSky() {
+  // Sky gradient sphere
+  const skyGeo = new THREE.SphereGeometry(500, 16, 8);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: { topColor: { value: new THREE.Color(0x0a3a6e) }, bottomColor: { value: new THREE.Color(0x1a6090) } },
+    vertexShader: `varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: `uniform vec3 topColor, bottomColor; varying vec3 vPos; void main(){ float h=normalize(vPos).y*0.5+0.5; gl_FragColor=vec4(mix(bottomColor,topColor,h),1.0); }`
+  });
+  skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+  scene.add(ambientLight);
+
+  // Sky-to-ground fill light — gives outdoor scenes a soft, painterly bounce
+  hemiLight = new THREE.HemisphereLight(0x9ec8ff, 0x3c2f22, 0.55);
+  scene.add(hemiLight);
+
+  sunLight = new THREE.DirectionalLight(0xffe9c8, 1.0);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.near = 0.5;
+  sunLight.shadow.camera.far = 200;
+  sunLight.shadow.camera.left = -80;
+  sunLight.shadow.camera.right = 80;
+  sunLight.shadow.camera.top = 80;
+  sunLight.shadow.camera.bottom = -80;
+  scene.add(sunLight);
+
+  // Fog
+  scene.fog = new THREE.Fog(0x87ceeb, 60, 120);
+}
+
+function updateSky(dt) {
+  worldTime = (worldTime + dt * 0.003) % 1;
+  const angle = worldTime * Math.PI * 2 - Math.PI / 2;
+  const sx = Math.cos(angle) * 150;
+  const sy = Math.sin(angle) * 150;
+  sunLight.position.set(sx, sy, 60);
+  sunLight.target.position.set(player.pos.x, player.pos.y, player.pos.z);
+  sunLight.target.updateMatrixWorld();
+
+  const dayFactor = Math.max(0, Math.sin(angle));
+  ambientLight.intensity = 0.12 + dayFactor * 0.35;
+  sunLight.intensity = 0.15 + dayFactor * 1.35;
+  hemiLight.intensity = 0.2 + dayFactor * 0.55;
+
+  // Sun glows warm at dawn/dusk, cools toward midday
+  sunLight.color.lerpColors(new THREE.Color(0xff9d5c), new THREE.Color(0xffe9c8), Math.min(1, dayFactor * 1.6));
+  hemiLight.color.lerpColors(new THREE.Color(0x223355), new THREE.Color(0x9ec8ff), dayFactor);
+  hemiLight.groundColor.lerpColors(new THREE.Color(0x0c0a14), new THREE.Color(0x4a3a2a), dayFactor);
+
+  // Sky color
+  const dayTop = new THREE.Color(0x1a5fa8);
+  const nightTop = new THREE.Color(0x020510);
+  const dayBot = new THREE.Color(0x4a9fd4);
+  const nightBot = new THREE.Color(0x050a1a);
+  skyMesh.material.uniforms.topColor.value.lerpColors(nightTop, dayTop, dayFactor);
+  skyMesh.material.uniforms.bottomColor.value.lerpColors(nightBot, dayBot, dayFactor);
+  scene.fog.color.lerpColors(new THREE.Color(0x050a20), new THREE.Color(0x87ceeb), dayFactor);
+
+  // Time display
+  const h = Math.floor(worldTime * 24);
+  const m = Math.floor((worldTime * 24 - h) * 60);
+  document.getElementById('time-display').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+function init() {
+  SEED = Math.floor(Math.random() * 999999);
+  noise = new Noise(SEED);
+  document.getElementById('seed-val').textContent = SEED;
+  document.getElementById('seed-display').textContent = `SEED: ${SEED}`;
+
+  // Renderer
+  const canvas = document.getElementById('canvas');
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+
+  scene = new THREE.Scene();
+  clock = new THREE.Clock();
+
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+  worldTime = 0.3;
+
+  setupSky();
+  setupPostProcessing();
+  setupHand();
+  spawnBillboard();
+  setRadioVolume(radioVolume);
+
+  // Spawn player above terrain
+  const spawnH = getHeight(0, 0) + 3;
+  player.pos.set(8, spawnH, 8);
+
+  // Pre-load chunks around spawn
+  for (let dx = -2; dx <= 2; dx++)
+    for (let dz = -2; dz <= 2; dz++)
+      loadChunk(dx, dz);
+
+  setupInput();
+  setupMobileControls();
+  renderHotbar();
+  // Equipamento inicial — toda jornada começa com uma espada de madeira e umas frutas
+  addItemToInventory(ITEM.SWORD_WOOD, 1);
+  addItemToInventory(ITEM.APPLE, 2);
+  updateHealthHUD();
+  window.addEventListener('resize', onResize);
+}
+
+function setupInput() {
+  document.addEventListener('keydown', e => { keys[e.code] = true; });
+  document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  // Double-tap Space toggles flying (estilo modo criativo do Minecraft)
+  let lastSpaceTime = 0;
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space' || !pointerLocked || player.ridingDino) return;
+    const now = performance.now();
+    if (now - lastSpaceTime < 300) {
+      player.flying = !player.flying;
+      player.vel.y = 0;
+    }
+    lastSpaceTime = now;
+  });
+
+  // Comer fruta selecionada — recupera vida (campo "food" em ITEM_INFO)
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'KeyF' || !pointerLocked) return;
+    const slot = inventory[player.selectedSlot];
+    const info = slot ? ITEM_INFO[slot.id] : null;
+    if (!info || !info.food) return;
+    if (player.hp >= player.maxHp) return;
+    player.hp = Math.min(player.maxHp, player.hp + info.food);
+    updateHealthHUD();
+    removeOneFromSlot(player.selectedSlot);
+    swingHand();
+  });
+
+  // Desmontar do dinossauro — tecla R
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'KeyR' || !pointerLocked) return;
+    if (player.ridingDino) {
+      const dino = player.ridingDino;
+      player.ridingDino = null;
+      dino.rider = null;
+      player.flying = false;
+      player.pos.y += 1;
+    }
+  });
+
+  // Volume das TVs/telões da Login FM — [ abaixa, ] aumenta (afeta todas de uma vez)
+  document.addEventListener('keydown', e => {
+    if (!pointerLocked) return;
+    if (e.code === 'BracketLeft' || e.key === '[') setRadioVolume(radioVolume - 0.1);
+    else if (e.code === 'BracketRight' || e.key === ']') setRadioVolume(radioVolume + 0.1);
+  });
+
+  // Slot keys
+  document.addEventListener('keydown', e => {
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= 9) selectSlot(n - 1);
+  });
+
+  // Inventory toggle
+  document.addEventListener('keydown', e => {
+    if (e.code === 'KeyE' && (pointerLocked || inventoryOpen)) toggleInventory();
+    else if (e.code === 'Escape' && inventoryOpen) toggleInventory();
+  });
+
+  // Scroll to change slot
+  document.addEventListener('wheel', e => {
+    if (!pointerLocked) return;
+    let s = player.selectedSlot + (e.deltaY > 0 ? 1 : -1);
+    s = ((s % HOTBAR_SIZE) + HOTBAR_SIZE) % HOTBAR_SIZE;
+    selectSlot(s);
+  });
+
+  // Mouse click — place/break blocks
+  document.addEventListener('mousedown', e => {
+    if (!pointerLocked) return;
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    const result = raycast(camera.position, dir, 6);
+
+    if (e.button === 2) {
+      // Tocar/pausar a TV da Login FM, se for o que está mirado mais perto
+      const radio = pickRadioInSight(camera.position, dir);
+      const radioDist = radio ? camera.position.distanceTo(radio.pos) : Infinity;
+
+      // Attack a mob if one's lined up and closer than the targeted block
+      const mob = pickMobInSight(camera.position, dir, 4);
+      const mobDist = mob ? camera.position.distanceTo(mob.pos) : Infinity;
+      const blockDist = result.hit ? camera.position.distanceTo(new THREE.Vector3(result.bx + 0.5, result.by + 0.5, result.bz + 0.5)) : Infinity;
+      if (radio && radioDist <= mobDist && radioDist <= blockDist) {
+        toggleRadio(radio);
+      } else if (mob && mobDist < blockDist) {
+        // Dinossauros: clique com mão vazia = montar/desmontar; com espada = atacar
+        if (mob.type === 'dino') {
+          const slot = inventory[player.selectedSlot];
+          const info = slot ? ITEM_INFO[slot.id] : null;
+          if (!info || !info.tool) {
+            // Montar/desmontar no dinossauro
+            if (player.ridingDino === mob) {
+              // Desmontar
+              player.ridingDino = null;
+              mob.rider = null;
+              player.flying = false;
+              player.pos.y += 1;
+            } else if (!player.ridingDino && !mob.rider) {
+              // Montar
+              player.ridingDino = mob;
+              mob.rider = player;
+              mob.tamed = true;
+            }
+          } else {
+            // Atacar com arma
+            damageMob(mob, info.damage || 1);
+            swingHand();
+          }
+        } else {
+          // Outros mobs — atacar normalmente
+          const slot = inventory[player.selectedSlot];
+          const info = slot ? ITEM_INFO[slot.id] : null;
+          damageMob(mob, info && info.damage ? info.damage : 1);
+          swingHand();
+        }
+      } else if (result.hit) {
+        // Break block — collect it into the inventory
+        const broken = getWorldBlock(result.bx, result.by, result.bz);
+        setBlock(result.bx, result.by, result.bz, BLOCK.AIR);
+        if (ITEM_INFO[broken]) addItemToInventory(broken, 1);
+        // Folhagem às vezes solta frutas — fonte de comida pra recuperar vida
+        if (broken === BLOCK.LEAVES) {
+          const fruitRoll = Math.random();
+          if (fruitRoll < 0.04) addItemToInventory(ITEM.MELON, 1);
+          else if (fruitRoll < 0.16) addItemToInventory(ITEM.APPLE, 1);
+        }
+        swingHand();
+      }
+    } else if (e.button === 0 && result.hit && result.prev) {
+      // Place block from the selected hotbar slot
+      const slot = inventory[player.selectedSlot];
+      if (slot) {
+        const info = ITEM_INFO[slot.id];
+        if (info && info.block != null) {
+          setBlock(result.prev.bx, result.prev.by, result.prev.bz, info.block);
+          removeOneFromSlot(player.selectedSlot);
+        }
+      }
+    }
+  });
+
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Pointer lock
+  document.addEventListener('pointerlockchange', () => {
+    pointerLocked = document.pointerLockElement === renderer.domElement;
+    if (pointerLocked) {
+      document.getElementById('overlay').classList.add('hidden');
+    } else if (!inventoryOpen) {
+      document.getElementById('overlay').classList.remove('hidden');
+    }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (pointerLocked && !isMobile) {
+      // Movimento livre do mouse no PC (sem limitação horizontal)
+      player.yaw -= e.movementX * 0.002;
+      player.pitch -= e.movementY * 0.002;
+      player.pitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, player.pitch));
+    }
+    if (inventoryOpen && !isMobile) {
+      const el = document.getElementById('cursor-item');
+      el.style.left = e.clientX + 'px';
+      el.style.top = e.clientY + 'px';
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CONTROLES MOBILE — joystick virtual + arrastar pra olhar + botões
+//  (em vez de pointer lock + WASD + mouse, que não existem no toque)
+// ════════════════════════════════════════════════════════════════
+function setupMobileControls() {
+  if (!isMobile) {
+    // Garante que controles mobile ficam escondidos no PC
+    document.getElementById('mobile-controls').classList.add('hidden');
+    return;
+  }
+  document.body.classList.add('mobile-layout');
+
+  const joystick = document.getElementById('joystick-zone');
+  const knob     = document.getElementById('joystick-knob');
+  const lookZone = document.getElementById('look-zone');
+  const btnJump  = document.getElementById('btn-jump');
+  const btnDown  = document.getElementById('btn-down');
+  const btnBreak = document.getElementById('btn-break');
+  const btnPlace = document.getElementById('btn-place');
+  const btnInv   = document.getElementById('btn-inventory');
+
+  // ----- Joystick (movimento) -----
+  const JOY_RADIUS = 55;
+  let joyTouchId = null;
+
+  function updateJoystick(touch) {
+    const rect = joystick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = touch.clientX - cx;
+    const dy = touch.clientY - cy;
+    const dist  = Math.min(Math.hypot(dx, dy), JOY_RADIUS);
+    const angle = Math.atan2(dy, dx);
+    const kx = Math.cos(angle) * dist;
+    const ky = Math.sin(angle) * dist;
+    knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+    mobileMove.x =  kx / JOY_RADIUS; // direita positivo
+    mobileMove.y = -ky / JOY_RADIUS; // frente positivo
+  }
+  function resetJoystick() {
+    joyTouchId = null;
+    mobileMove.x = 0;
+    mobileMove.y = 0;
+    knob.style.transform = 'translate(-50%, -50%)';
+  }
+
+  joystick.addEventListener('touchstart', e => {
+    if (!isMobile) return;
+    const t = e.changedTouches[0];
+    joyTouchId = t.identifier;
+    updateJoystick(t);
+    e.preventDefault();
+  });
+  joystick.addEventListener('touchmove', e => {
+    if (!isMobile) return;
+    for (const t of e.changedTouches) if (t.identifier === joyTouchId) updateJoystick(t);
+    e.preventDefault();
+  });
+  joystick.addEventListener('touchend', e => {
+    if (!isMobile) return;
+    for (const t of e.changedTouches) if (t.identifier === joyTouchId) resetJoystick();
+  });
+  joystick.addEventListener('touchcancel', e => {
+    if (!isMobile) return;
+    for (const t of e.changedTouches) if (t.identifier === joyTouchId) resetJoystick();
+  });
+
+  // ----- Olhar (arrastar pra girar a câmera, igual ao mousemove) -----
+  const LOOK_SENSITIVITY = 0.0048;
+  let lookTouchId = null, lastLookX = 0, lastLookY = 0;
+
+  lookZone.addEventListener('touchstart', e => {
+    if (!isMobile || lookTouchId !== null) return;
+    const t = e.changedTouches[0];
+    lookTouchId = t.identifier;
+    lastLookX = t.clientX;
+    lastLookY = t.clientY;
+  });
+  lookZone.addEventListener('touchmove', e => {
+    if (!isMobile) return; // Ignora eventos de toque no PC
+    for (const t of e.changedTouches) {
+      if (t.identifier !== lookTouchId) continue;
+      const dx = t.clientX - lastLookX;
+      const dy = t.clientY - lastLookY;
+      lastLookX = t.clientX;
+      lastLookY = t.clientY;
+      if (!pointerLocked || inventoryOpen) continue;
+      player.yaw   -= dx * LOOK_SENSITIVITY;
+      player.pitch -= dy * LOOK_SENSITIVITY;
+      player.pitch  = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, player.pitch));
+    }
+    e.preventDefault();
+  });
+  lookZone.addEventListener('touchend', e => {
+    if (!isMobile) return;
+    for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null;
+  });
+  lookZone.addEventListener('touchcancel', e => {
+    if (!isMobile) return;
+    for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null;
+  });
+
+  // ----- Botões de ação (reaproveitam a lógica já existente do mouse/teclado) -----
+  function onPress(btn, down, up) {
+    btn.addEventListener('touchstart', e => { down(); e.preventDefault(); }, { passive: false });
+    btn.addEventListener('touchend',   e => { if (up) up(); e.preventDefault(); }, { passive: false });
+    btn.addEventListener('touchcancel',e => { if (up) up(); e.preventDefault(); }, { passive: false });
+  }
+
+  // Toque duplo no botão de pular alterna o modo voo (igual ao Espaço 2x no PC)
+  let lastJumpTapTime = 0;
+  onPress(btnJump,
+    () => {
+      keys['Space'] = true;
+      const now = performance.now();
+      if (now - lastJumpTapTime < 300 && !player.ridingDino) {
+        player.flying = !player.flying;
+        player.vel.y = 0;
+      }
+      lastJumpTapTime = now;
+    },
+    () => { keys['Space'] = false; });
+
+  // Descer voando / correr andando — equivalente ao Shift no PC
+  onPress(btnDown,
+    () => { keys['ShiftLeft'] = true; },
+    () => { keys['ShiftLeft'] = false; });
+
+  // Botão direito do mouse: quebra bloco / ataca / liga rádio
+  onPress(btnBreak, () => document.dispatchEvent(new MouseEvent('mousedown', { button: 2 })));
+
+  // Botão esquerdo do mouse: coloca bloco
+  onPress(btnPlace, () => document.dispatchEvent(new MouseEvent('mousedown', { button: 0 })));
+
+  // Tecla E: abre/fecha inventário
+  onPress(btnInv, () => document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })));
+
+  // Esconde o painel de dicas de teclado/mouse (não fazem sentido no toque)
+  const controlsPanel = document.getElementById('controls');
+  if (controlsPanel) controlsPanel.style.display = 'none';
+}
+
+function selectSlot(i) {
+  player.selectedSlot = i;
+  renderInventory();
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  if (composer) composer.setSize(window.innerWidth, window.innerHeight);
+  if (bloomPass) bloomPass.resolution.set(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+function update(dt) {
+  if (player.invuln > 0) player.invuln -= dt;
+
+  // Se está montado no dinossauro, controla o dino em vez de si mesmo
+  if (player.ridingDino) {
+    const dino = player.ridingDino;
+    const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+    const right   = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+    const speed   = 12;  // Dinos são rápidos!
+
+    // Controles do dino
+    if (keys['KeyW'] || (isMobile && mobileMove.y > 0)) {
+      dino.vel.addScaledVector(forward, speed * dt * (isMobile ? mobileMove.y : 1));
+    }
+    if (keys['KeyS'] || (isMobile && mobileMove.y < 0)) {
+      dino.vel.addScaledVector(forward, -speed * dt * (isMobile ? Math.abs(mobileMove.y) : 1));
+    }
+    if (keys['KeyA'] || (isMobile && mobileMove.x < 0)) {
+      player.yaw += dt * 2.5;
+    }
+    if (keys['KeyD'] || (isMobile && mobileMove.x > 0)) {
+      player.yaw -= dt * 2.5;
+    }
+
+    dino.yaw = player.yaw;
+
+    // Espaço = voar! (dinossauro com asas tipo pterodáctilo)
+    if (keys['Space']) {
+      dino.vel.y = speed * 0.8;
+      player.flying = true;  // marca que está "voando" pra desabilitar gravidade
+    } else if (keys['ShiftLeft']) {
+      dino.vel.y = -speed * 0.6;
+    } else {
+      dino.vel.y -= 20 * dt;  // gravidade
+    }
+
+    // Fricção horizontal
+    dino.vel.x *= 0.88;
+    dino.vel.z *= 0.88;
+
+    // Atualiza posição do jogador = posição do dino + offset pra ficar "montado em cima"
+    player.pos.set(dino.pos.x, dino.pos.y + 1.9, dino.pos.z);
+    player.vel.set(0, 0, 0);
+    player.onGround = dino.onGround;
+
+  } else {
+    // Movimento normal do jogador (sem dinossauro)
+    const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+    const right   = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+    const speed   = player.flying
+      ? (keys['ShiftLeft'] ? player.speed * 4.2 : player.speed * 2.4)
+      : (keys['ShiftLeft'] ? player.speed * 1.8 : player.speed);
+
+    // Andar pra frente/trás é mais rápido que de lado (estilo "corrida" natural)
+    const fwdSpeed = speed * 1.5;
+
+    if (keys['KeyW']) player.vel.addScaledVector(forward, fwdSpeed * dt);
+    if (keys['KeyS']) player.vel.addScaledVector(forward, -fwdSpeed * dt);
+    if (keys['KeyA']) player.vel.addScaledVector(right, -speed * dt);
+    if (keys['KeyD']) player.vel.addScaledVector(right,  speed * dt);
+
+    // Joystick virtual (mobile) — movimento analógico em qualquer direção
+    if (isMobile && (mobileMove.x || mobileMove.y)) {
+      player.vel.addScaledVector(forward, mobileMove.y * fwdSpeed * dt);
+      player.vel.addScaledVector(right,   mobileMove.x * speed * dt);
+    }
+
+    if (player.flying) {
+      // Flight: Espaço sobe, Shift desce, sem gravidade
+      if (keys['Space']) player.vel.y = speed;
+      else if (keys['ShiftLeft']) player.vel.y = -speed;
+      else player.vel.y *= 0.8;
+      player.onGround = false;
+    } else {
+      // Jump
+      if (keys['Space'] && player.onGround) {
+        player.vel.y = player.jumpForce;
+        player.onGround = false;
+      }
+      // Gravity
+      player.vel.y -= 20 * dt;
+    }
+
+    // Horizontal friction
+    player.vel.x *= 0.85;
+    player.vel.z *= 0.85;
+
+    // Move & collide
+    movePlayer(dt);
+  }
+
+  // Camera
+  camera.position.set(player.pos.x, player.pos.y + player.height * 0.85, player.pos.z);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch;
+
+  // Follow sky
+  skyMesh.position.copy(camera.position);
+
+  // Update chunks
+  updateChunks();
+  updateSky(dt);
+  updateMobs(dt);
+  updateRadios(dt);
+  updateDroppedItems(dt);
+  updateHand(dt);
+
+  // HUD
+  document.getElementById('px').textContent = Math.floor(player.pos.x);
+  document.getElementById('py').textContent = Math.floor(player.pos.y);
+  document.getElementById('pz').textContent = Math.floor(player.pos.z);
+  document.getElementById('chunks').textContent = chunks.size;
+
+  // Target block
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  const r = raycast(camera.position, dir, 6);
+  const sightedMob = pickMobInSight(camera.position, dir, 4);
+  const sightedRadio = pickRadioInSight(camera.position, dir);
+  if (sightedRadio) {
+    const radioLabel = sightedRadio.reach > 5 ? '📡 Telão Login FM' : '📺 TV Login FM';
+    document.getElementById('target-block').textContent = `${radioLabel} — clique direito p/ ${sightedRadio.playing ? 'pausar' : 'tocar'}`;
+  } else if (sightedMob) {
+    const mobNames = { cow: 'Vaca', zombie: 'Zumbi', dino: 'Dinossauro' };
+    if (sightedMob.type === 'dino') {
+      const action = player.ridingDino === sightedMob ? 'montado! [R] desmontar' : 'clique direito p/ montar';
+      document.getElementById('target-block').textContent = `🦖 ${mobNames[sightedMob.type]} (${Math.max(0, sightedMob.hp)}/${sightedMob.maxHp} HP) — ${action}`;
+    } else {
+      document.getElementById('target-block').textContent = `${mobNames[sightedMob.type] || 'Criatura'} (${Math.max(0, sightedMob.hp)}/${sightedMob.maxHp} HP)`;
+    }
+  } else if (r.hit) {
+    const bt = getWorldBlock(r.bx, r.by, r.bz);
+    const names = {[BLOCK.GRASS]:'Grama',[BLOCK.DIRT]:'Terra',[BLOCK.STONE]:'Pedra',[BLOCK.SAND]:'Areia',[BLOCK.WOOD]:'Madeira',[BLOCK.LEAVES]:'Folhas',[BLOCK.SNOW]:'Neve',[BLOCK.PLANKS]:'Tábuas',[BLOCK.WATER]:'Água',[BLOCK.BRICK_RED]:'Tijolo Vermelho',[BLOCK.ROOF_DARK]:'Telha Escura'};
+    document.getElementById('target-block').textContent = names[bt] || '?';
+  } else {
+    document.getElementById('target-block').textContent = '---';
+  }
+
+  // Biome
+  const biome = getBiome(player.pos.x, player.pos.z);
+  document.getElementById('biome').textContent = biome.charAt(0).toUpperCase() + biome.slice(1);
+
+  // Status de voo / montaria
+  const status = document.getElementById('fly-status');
+  if (status) {
+    if (player.ridingDino) {
+      status.textContent = 'Montado em Dino 🦖';
+    } else {
+      status.textContent = player.flying ? 'Voando ✈️' : 'Andando';
+    }
+  }
+
+  // FPS
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFpsTime >= 500) {
+    currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+    document.getElementById('fps').textContent = currentFps;
+    frameCount = 0; lastFpsTime = now;
+  }
+}
+
+function movePlayer(dt) {
+  // Try X
+  player.pos.x += player.vel.x * dt;
+  if (collidesPlayer()) { player.pos.x -= player.vel.x * dt; player.vel.x = 0; }
+
+  // Try Z
+  player.pos.z += player.vel.z * dt;
+  if (collidesPlayer()) { player.pos.z -= player.vel.z * dt; player.vel.z = 0; }
+
+  // Try Y
+  player.pos.y += player.vel.y * dt;
+  if (collidesPlayer()) {
+    if (player.vel.y < 0) player.onGround = true;
+    player.vel.y = 0;
+    if (player.onGround) {
+      // snap to top of block
+      player.pos.y = Math.ceil(player.pos.y);
+    }
+  } else {
+    player.onGround = false;
+  }
+}
+
+function collidesPlayer() {
+  const r = 0.3;
+  const h = player.height;
+  const bx = player.pos.x, by = player.pos.y, bz = player.pos.z;
+  for (const ox of [-r, r]) for (const oz of [-r, r]) {
+    if (isSolid(bx + ox, by, bz + oz)) return true;
+    if (isSolid(bx + ox, by + h * 0.5, bz + oz)) return true;
+    if (isSolid(bx + ox, by + h, bz + oz)) return true;
+  }
+  return false;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (pointerLocked) update(dt);
+  if (composer) composer.render(); else renderer.render(scene, camera);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MÚSICA CHIPTUNE DA TELA DE INÍCIO (estilo 8-bit / jogos retrô)
+//  Gerada na hora com Web Audio API — sem precisar de arquivo de música
+// ════════════════════════════════════════════════════════════════
+let titleMusicCtx = null;
+let titleMusicPlaying = false;
+let titleMusicTimer = null;
+
+function playTitleMusic() {
+  if (titleMusicPlaying) return;
+  titleMusicPlaying = true;
+
+  if (!titleMusicCtx) titleMusicCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = titleMusicCtx;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // Escala pentatônica — soa "jogo retrô" sem nota dissonante
+  const melody = [523.25, 659.25, 784.00, 659.25, 523.25, 392.00, 523.25, 659.25,
+                  587.33, 698.46, 880.00, 698.46, 587.33, 440.00, 523.25, 587.33];
+  const bass   = [130.81, 130.81, 196.00, 196.00, 146.83, 146.83, 196.00, 196.00];
+  const noteDur = 0.22;
+  let step = 0;
+
+  function scheduleStep() {
+    if (!titleMusicPlaying) return;
+    const t = ctx.currentTime;
+
+    // Melodia — onda quadrada, o som "8-bit" clássico
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = melody[step % melody.length];
+    gain.gain.setValueAtTime(0.05, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 0.9);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + noteDur);
+
+    // Linha de baixo — onda triangular, mais lenta
+    if (step % 2 === 0) {
+      const oscB = ctx.createOscillator();
+      const gainB = ctx.createGain();
+      oscB.type = 'triangle';
+      oscB.frequency.value = bass[(step / 2) % bass.length];
+      gainB.gain.setValueAtTime(0.06, t);
+      gainB.gain.exponentialRampToValueAtTime(0.0001, t + noteDur * 1.8);
+      oscB.connect(gainB).connect(ctx.destination);
+      oscB.start(t);
+      oscB.stop(t + noteDur * 2);
+    }
+
+    step++;
+    titleMusicTimer = setTimeout(scheduleStep, noteDur * 1000);
+  }
+
+  scheduleStep();
+}
+
+function stopTitleMusic() {
+  titleMusicPlaying = false;
+  if (titleMusicTimer) clearTimeout(titleMusicTimer);
+  titleMusicTimer = null;
+}
+
+// Navegadores só deixam tocar áudio depois de uma interação do usuário —
+// então a música começa no primeiro clique/tecla na tela de início.
+function primeTitleMusic() {
+  playTitleMusic();
+  document.removeEventListener('pointerdown', primeTitleMusic);
+  document.removeEventListener('keydown', primeTitleMusic);
+}
+document.addEventListener('pointerdown', primeTitleMusic);
+document.addEventListener('keydown', primeTitleMusic);
+
+function startGame() {
+  stopTitleMusic();
+  if (isMobile) {
+    // Não existe pointer lock em telas de toque — ativa o jogo direto
+    pointerLocked = true;
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('mobile-controls').classList.remove('hidden');
+  } else {
+    // PC: usa pointer lock tradicional e garante que controles mobile ficam escondidos
+    document.getElementById('mobile-controls').classList.add('hidden');
+    renderer.domElement.requestPointerLock();
+  }
+  if (!clock.running) {
+    init();
+    animate();
+  }
+}
+
+// Initialize scene immediately so it's visible
+window.addEventListener('load', () => {
+  init();
+  animate();
+});
+</script>
+</body>
+</html>
