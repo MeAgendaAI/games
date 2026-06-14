@@ -588,6 +588,7 @@
     <kbd>1-9</kbd> slot &nbsp; <kbd>E</kbd> inventário<br>
     <kbd>F</kbd> comer fruta (recupera vida)<br>
     <kbd>R</kbd> desmontar do dinossauro 🦖<br>
+    <kbd>F5</kbd> câmera 3ª pessoa 📹<br>
     <kbd>[</kbd> <kbd>]</kbd> volume da rádio/telão
   </div>
 
@@ -1044,6 +1045,10 @@ const isMobile = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) &&
                   (window.innerWidth <= 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 let mobileMove = { x: 0, y: 0 }; // movimento via joystick virtual: x = força lateral, y = força frente/trás
 let frameCount = 0, lastFpsTime = 0, currentFps = 0;
+
+// Câmera em terceira pessoa
+let thirdPersonMode = false;
+let playerModel = null;
 
 // Materials cache
 const matCache = new Map();
@@ -1648,63 +1653,132 @@ function trySpawnNearChunk(cx, cz) {
 }
 
 // ============================================================
-//  DINOSSAUROS — montáveis e voadores!
+//  DINOSSAUROS — montáveis e voadores! Modelo mais realista
 // ============================================================
 function makeDinoMesh() {
   const group = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x2d8a4d });
-  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xffdd44 });
-  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x1f6638 });
 
-  // Corpo principal
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.2, 2.2), bodyMat);
-  body.position.y = 1.6;
+  // Cores mais realistas - estilo pterodáctilo/dragão
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x8b6f47 }); // marrom escuro
+  const bellyMat = new THREE.MeshLambertMaterial({ color: 0xc9a97a }); // barriga mais clara
+  const scaleMat = new THREE.MeshLambertMaterial({ color: 0x6b5535 }); // escamas escuras
+  const wingMat = new THREE.MeshLambertMaterial({ color: 0xa38560, side: THREE.DoubleSide, opacity: 0.9, transparent: true });
+  const clawMat = new THREE.MeshLambertMaterial({ color: 0x3a3a3a }); // garras pretas
+  const eyeMat = new THREE.MeshLambertMaterial({ color: 0xff6600, emissive: 0xff3300, emissiveIntensity: 0.3 }); // olhos alaranjados brilhantes
 
-  // Cabeça
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.8), bodyMat);
-  head.position.set(0, 1.8, 1.5);
+  // Corpo principal - mais alongado e aerodinâmico
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 2.8), bodyMat);
+  body.position.y = 1.7;
 
-  // Focinho/bico
-  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), scaleMat);
-  snout.position.set(0, 1.7, 1.95);
+  // Barriga mais clara
+  const belly = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 2.4), bellyMat);
+  belly.position.set(0, 1.4, 0);
 
-  // Olhos
-  const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+  // Pescoço
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.7), bodyMat);
+  neck.position.set(0, 1.9, 1.6);
+
+  // Cabeça - mais alongada e reptiliana
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 1.0), bodyMat);
+  head.position.set(0, 2.1, 2.3);
+
+  // Crista no topo da cabeça
+  const crest = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.6), scaleMat);
+  crest.position.set(0, 2.5, 2.2);
+
+  // Focinho/bico pontudo
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.6), scaleMat);
+  snout.position.set(0, 2.0, 2.85);
+
+  // Mandíbula inferior
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.5), scaleMat);
+  jaw.position.set(0, 1.8, 2.8);
+
+  // Olhos grandes e expressivos
+  const eyeGeo = new THREE.SphereGeometry(0.12, 8, 8);
   const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-  eyeL.position.set(-0.25, 1.9, 1.8);
+  eyeL.position.set(-0.25, 2.2, 2.6);
   const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-  eyeR.position.set(0.25, 1.9, 1.8);
+  eyeR.position.set(0.25, 2.2, 2.6);
 
-  // Cauda
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 1.3), bodyMat);
-  tail.position.set(0, 1.3, -1.5);
+  // Cauda longa e pontiaguda
+  const tail1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1.2), bodyMat);
+  tail1.position.set(0, 1.5, -1.8);
+  const tail2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 1.0), bodyMat);
+  tail2.position.set(0, 1.4, -2.7);
+  const tailTip = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.7), scaleMat);
+  tailTip.position.set(0, 1.35, -3.4);
 
-  // Pernas
-  const legGeo = new THREE.BoxGeometry(0.35, 1.1, 0.35);
+  // Pernas traseiras - mais musculosas e realistas
+  const legGeo = new THREE.BoxGeometry(0.4, 1.3, 0.4);
   const legs = [];
-  for (const [lx, lz] of [[-0.5, -0.7], [0.5, -0.7], [-0.5, 0.7], [0.5, 0.7]]) {
+  for (const [lx, lz] of [[-0.45, -0.5], [0.45, -0.5]]) {
     const leg = new THREE.Mesh(legGeo, scaleMat);
-    leg.position.set(lx, 0.55, lz);
+    leg.position.set(lx, 0.65, lz);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.6), clawMat);
+    foot.position.set(lx, 0.08, lz + 0.15);
     legs.push(leg);
+    group.add(leg, foot);
+  }
+
+  // Pernas dianteiras menores (estilo pterodáctilo)
+  const frontLegGeo = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+  for (const [lx, lz] of [[-0.4, 0.9], [0.4, 0.9]]) {
+    const leg = new THREE.Mesh(frontLegGeo, scaleMat);
+    leg.position.set(lx, 0.9, lz);
     group.add(leg);
   }
 
-  // Asas — grandes asas de pterodáctilo para voar!
-  const wingMat = new THREE.MeshLambertMaterial({ color: 0x3da85f, side: THREE.DoubleSide });
-  const wingL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 1.4), wingMat);
-  wingL.position.set(-0.9, 1.8, 0);
+  // Asas GIGANTES e realistas - estilo dragão/pterodáctilo
+  // Estrutura óssea da asa
+  const wingBoneL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 0.15), clawMat);
+  wingBoneL.position.set(-0.8, 1.9, 0.3);
+  wingBoneL.rotation.z = 0.5;
+  const wingBoneR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.2, 0.15), clawMat);
+  wingBoneR.position.set(0.8, 1.9, 0.3);
+  wingBoneR.rotation.z = -0.5;
+
+  // Membrana da asa - triangular e grande
+  const wingShape = new THREE.Shape();
+  wingShape.moveTo(0, 0);
+  wingShape.lineTo(2.5, 1.2);
+  wingShape.lineTo(2.0, -0.8);
+  wingShape.lineTo(0, 0);
+
+  const wingGeometry = new THREE.ShapeGeometry(wingShape);
+  const wingL = new THREE.Mesh(wingGeometry, wingMat);
+  wingL.position.set(-0.8, 1.9, 0);
+  wingL.rotation.y = Math.PI / 2;
   wingL.rotation.z = 0.3;
-  const wingR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 1.4), wingMat);
-  wingR.position.set(0.9, 1.8, 0);
+
+  const wingR = new THREE.Mesh(wingGeometry, wingMat);
+  wingR.position.set(0.8, 1.9, 0);
+  wingR.rotation.y = -Math.PI / 2;
   wingR.rotation.z = -0.3;
 
-  group.add(body, head, snout, eyeL, eyeR, tail, wingL, wingR);
+  // Espinhos dorsais para dar aspecto mais selvagem
+  const spikeGeo = new THREE.BoxGeometry(0.15, 0.4, 0.1);
+  for (let i = 0; i < 5; i++) {
+    const spike = new THREE.Mesh(spikeGeo, scaleMat);
+    spike.position.set(0, 2.2, 1.0 - i * 0.6);
+    spike.rotation.x = -0.3;
+    group.add(spike);
+  }
+
+  group.add(body, belly, neck, head, crest, snout, jaw, eyeL, eyeR);
+  group.add(tail1, tail2, tailTip);
+  group.add(wingBoneL, wingBoneR, wingL, wingR);
+
   group.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
   group.userData.legs = legs;
   group.userData.head = head;
   group.userData.wingL = wingL;
   group.userData.wingR = wingR;
+  group.userData.neck = neck;
+  group.userData.tail1 = tail1;
+  group.userData.tail2 = tail2;
+
   return group;
 }
 
@@ -1817,20 +1891,45 @@ function updateMobs(dt) {
     }
     m.pos.y = ny;
 
-    // Lógica específica do dinossauro
+    // Lógica específica do dinossauro - animações mais realistas
     if (m.type === 'dino') {
-      // Se tem alguém montado, move junto com o rider
-      if (m.rider) {
-        const moving = Math.abs(m.vel.x) + Math.abs(m.vel.z) > 0.05;
-        if (moving) m.walkPhase += dt * 6;
-        m.wingPhase += dt * 8;
-        const wingL = m.mesh.userData.wingL;
-        const wingR = m.mesh.userData.wingR;
-        if (wingL && wingR) {
-          const flapAngle = Math.sin(m.wingPhase) * 0.6;
-          wingL.rotation.z = 0.3 + flapAngle;
-          wingR.rotation.z = -0.3 - flapAngle;
+      const moving = Math.abs(m.vel.x) + Math.abs(m.vel.z) > 0.05;
+      const isFlying = m.rider && !m.onGround;
+
+      if (moving) m.walkPhase += dt * 6;
+      m.wingPhase += dt * (isFlying ? 12 : 3); // bate asas mais rápido quando voando
+
+      const wingL = m.mesh.userData.wingL;
+      const wingR = m.mesh.userData.wingR;
+      const neck = m.mesh.userData.neck;
+      const head = m.mesh.userData.head;
+      const tail1 = m.mesh.userData.tail1;
+      const tail2 = m.mesh.userData.tail2;
+
+      if (wingL && wingR) {
+        // Batida de asas - maior amplitude quando voando
+        const flapAngle = Math.sin(m.wingPhase) * (isFlying ? 1.2 : 0.4);
+        wingL.rotation.z = 0.3 + flapAngle;
+        wingR.rotation.z = -0.3 - flapAngle;
+      }
+
+      // Movimento de pescoço e cabeça - respiração/olhando ao redor
+      if (neck && head) {
+        const breathe = Math.sin(m.walkPhase * 0.5) * 0.08;
+        neck.position.y = 1.9 + breathe;
+        head.position.y = 2.1 + breathe;
+
+        // Cabeça balança levemente quando anda
+        if (moving) {
+          head.rotation.x = Math.sin(m.walkPhase) * 0.1;
         }
+      }
+
+      // Cauda balança quando anda (contrapeso natural)
+      if (tail1 && tail2) {
+        const tailSwing = moving ? Math.sin(m.walkPhase * 0.8) * 0.2 : 0;
+        tail1.rotation.y = tailSwing;
+        tail2.rotation.y = tailSwing * 1.5;
       }
     }
 
@@ -2313,6 +2412,70 @@ function restartGame() {
 }
 
 // ============================================================
+//  PLAYER MODEL (terceira pessoa)
+// ============================================================
+function makePlayerModel() {
+  const group = new THREE.Group();
+
+  // Cores estilo Steve do Minecraft
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xd9a066 });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x5a3c22 });
+  const shirtMat = new THREE.MeshLambertMaterial({ color: 0x4d6a8f });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
+  const shoeMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+
+  // Cabeça
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
+  head.position.set(0, 1.65, 0);
+
+  // Cabelo/capacete
+  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.3, 0.52), hairMat);
+  hair.position.set(0, 1.8, 0);
+
+  // Corpo
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.3), shirtMat);
+  body.position.set(0, 1.15, 0);
+
+  // Braços
+  const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+  const armL = new THREE.Mesh(armGeo, shirtMat);
+  armL.position.set(-0.35, 1.18, 0);
+  const armR = new THREE.Mesh(armGeo, shirtMat);
+  armR.position.set(0.35, 1.18, 0);
+
+  // Pernas
+  const legGeo = new THREE.BoxGeometry(0.22, 0.75, 0.22);
+  const legL = new THREE.Mesh(legGeo, pantsMat);
+  legL.position.set(-0.14, 0.4, 0);
+  const legR = new THREE.Mesh(legGeo, pantsMat);
+  legR.position.set(0.14, 0.4, 0);
+
+  // Pés
+  const footGeo = new THREE.BoxGeometry(0.24, 0.1, 0.28);
+  const footL = new THREE.Mesh(footGeo, shoeMat);
+  footL.position.set(-0.14, 0.05, 0.03);
+  const footR = new THREE.Mesh(footGeo, shoeMat);
+  footR.position.set(0.14, 0.05, 0.03);
+
+  group.add(head, hair, body, armL, armR, legL, legR, footL, footR);
+  group.traverse(o => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+
+  // Armazena referências para animação
+  group.userData.armL = armL;
+  group.userData.armR = armR;
+  group.userData.legL = legL;
+  group.userData.legR = legR;
+  group.userData.walkPhase = 0;
+
+  return group;
+}
+
+// ============================================================
 //  FIRST-PERSON HAND (braço + item segurado)
 // ============================================================
 let handGroup, heldItemGroup, armMesh;
@@ -2424,6 +2587,63 @@ function swingHand() {
   handSwing = 1;
 }
 
+function setupPlayerModel() {
+  playerModel = makePlayerModel();
+  playerModel.visible = false; // invisível em primeira pessoa
+  scene.add(playerModel);
+}
+
+function toggleThirdPerson() {
+  thirdPersonMode = !thirdPersonMode;
+
+  if (playerModel) {
+    playerModel.visible = thirdPersonMode;
+  }
+
+  if (handGroup) {
+    handGroup.visible = !thirdPersonMode;
+  }
+
+  console.log('📹 Câmera:', thirdPersonMode ? 'Terceira Pessoa' : 'Primeira Pessoa');
+}
+
+function updatePlayerModel(dt) {
+  if (!playerModel || !thirdPersonMode) return;
+
+  // Posiciona o modelo no lugar do jogador
+  playerModel.position.copy(player.pos);
+  playerModel.position.y -= player.height * 0.85; // ajusta para os pés ficarem no chão
+  playerModel.rotation.y = player.yaw;
+
+  // Animação de caminhada
+  const horizSpeed = Math.hypot(player.vel.x, player.vel.z);
+  const moving = horizSpeed > 0.6 && player.onGround;
+
+  if (moving) {
+    playerModel.userData.walkPhase += dt * 8;
+  }
+
+  const armL = playerModel.userData.armL;
+  const armR = playerModel.userData.armR;
+  const legL = playerModel.userData.legL;
+  const legR = playerModel.userData.legR;
+
+  if (moving) {
+    // Balanço de braços e pernas enquanto anda
+    const swing = Math.sin(playerModel.userData.walkPhase);
+    armL.rotation.x = swing * 0.6;
+    armR.rotation.x = -swing * 0.6;
+    legL.rotation.x = -swing * 0.5;
+    legR.rotation.x = swing * 0.5;
+  } else {
+    // Parado - braços e pernas retos
+    armL.rotation.x = 0;
+    armR.rotation.x = 0;
+    legL.rotation.x = 0;
+    legR.rotation.x = 0;
+  }
+}
+
 // Sky / lighting
 let sunLight, ambientLight, hemiLight, skyMesh;
 function setupSky() {
@@ -2523,6 +2743,7 @@ function init() {
   setupSky();
   setupPostProcessing();
   setupHand();
+  setupPlayerModel();
   spawnBillboard();
   setRadioVolume(radioVolume);
 
@@ -2583,6 +2804,14 @@ function setupInput() {
       dino.rider = null;
       player.flying = false;
       player.pos.y += 1;
+    }
+  });
+
+  // Alternar câmera terceira pessoa — tecla F5 (igual Minecraft)
+  document.addEventListener('keydown', e => {
+    if (e.code === 'F5') {
+      e.preventDefault();
+      toggleThirdPerson();
     }
   });
 
@@ -2965,10 +3194,23 @@ function update(dt) {
   }
 
   // Camera
-  camera.position.set(player.pos.x, player.pos.y + player.height * 0.85, player.pos.z);
-  camera.rotation.order = 'YXZ';
-  camera.rotation.y = player.yaw;
-  camera.rotation.x = player.pitch;
+  if (thirdPersonMode) {
+    // Terceira pessoa - câmera atrás e acima do jogador
+    const distance = 5;
+    const height = 2;
+    const camX = player.pos.x + Math.sin(player.yaw) * distance;
+    const camZ = player.pos.z + Math.cos(player.yaw) * distance;
+    const camY = player.pos.y + player.height * 0.85 + height;
+
+    camera.position.set(camX, camY, camZ);
+    camera.lookAt(player.pos.x, player.pos.y + player.height * 0.5, player.pos.z);
+  } else {
+    // Primeira pessoa - câmera na cabeça do jogador
+    camera.position.set(player.pos.x, player.pos.y + player.height * 0.85, player.pos.z);
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = player.yaw;
+    camera.rotation.x = player.pitch;
+  }
 
   // Follow sky
   skyMesh.position.copy(camera.position);
@@ -2980,6 +3222,7 @@ function update(dt) {
   updateRadios(dt);
   updateDroppedItems(dt);
   updateHand(dt);
+  updatePlayerModel(dt);
 
   // HUD
   document.getElementById('px').textContent = Math.floor(player.pos.x);
