@@ -673,6 +673,12 @@ const BLOCK = {
   // variedade de cor às construções espalhadas pelo mundo (vermelha, etc).
   BRICK_RED: 10,
   ROOF_DARK: 11,
+  // Minérios - aparecem naturalmente na pedra em diferentes profundidades
+  COAL_ORE: 12,    // carvão - comum, qualquer altura
+  IRON_ORE: 13,    // ferro - médio, altura média
+  GOLD_ORE: 14,    // ouro - raro, profundo
+  DIAMOND_ORE: 15, // diamante - muito raro, muito profundo
+  EMERALD_ORE: 16, // esmeralda - super raro, montanhas
 };
 
 const BLOCK_COLORS = {
@@ -687,6 +693,12 @@ const BLOCK_COLORS = {
   [BLOCK.PLANKS]:    [0xab8456, 0xc49a6c],
   [BLOCK.BRICK_RED]: [0xa83c32, 0xc24c3f],
   [BLOCK.ROOF_DARK]: [0x5a2620, 0x6e2f27],
+  // Minérios - cinza da pedra + pontos brilhantes da cor do minério
+  [BLOCK.COAL_ORE]:    [0x404040, 0x505050], // preto carvão
+  [BLOCK.IRON_ORE]:    [0x9a8a7a, 0xb09880], // marrom ferrugem
+  [BLOCK.GOLD_ORE]:    [0xc0a050, 0xddb050], // dourado brilhante
+  [BLOCK.DIAMOND_ORE]: [0x5caccc, 0x70c0dd], // azul ciano diamante
+  [BLOCK.EMERALD_ORE]: [0x50c878, 0x60d888], // verde esmeralda
 };
 
 // ============================================================
@@ -702,6 +714,12 @@ const ITEM_INFO = {
   [BLOCK.LEAVES]: { name: 'Folhas',  icon: '🍃', stack: 64, block: BLOCK.LEAVES },
   [BLOCK.SNOW]:   { name: 'Neve',    icon: '❄️', stack: 64, block: BLOCK.SNOW },
   [BLOCK.PLANKS]: { name: 'Tábuas',  icon: '🟧', stack: 64, block: BLOCK.PLANKS },
+  // Minérios - blocos colocáveis
+  [BLOCK.COAL_ORE]:    { name: 'Carvão Minério',    icon: '⬛', stack: 64, block: BLOCK.COAL_ORE },
+  [BLOCK.IRON_ORE]:    { name: 'Ferro Minério',     icon: '🟫', stack: 64, block: BLOCK.IRON_ORE },
+  [BLOCK.GOLD_ORE]:    { name: 'Ouro Minério',      icon: '🟨', stack: 64, block: BLOCK.GOLD_ORE },
+  [BLOCK.DIAMOND_ORE]: { name: 'Diamante Minério',  icon: '💠', stack: 64, block: BLOCK.DIAMOND_ORE },
+  [BLOCK.EMERALD_ORE]: { name: 'Esmeralda Minério', icon: '💚', stack: 64, block: BLOCK.EMERALD_ORE },
 };
 
 // Non-block items (tools, weapons, food) live in their own id range so they
@@ -713,6 +731,19 @@ const ITEM = {
   STICK: 103,
   APPLE: 104,
   MELON: 105,
+  // Recursos minerados e refinados
+  COAL: 106,
+  IRON_INGOT: 107,
+  GOLD_INGOT: 108,
+  DIAMOND: 109,
+  EMERALD: 110,
+  // Ferramentas e armas de minérios
+  SWORD_IRON: 111,
+  SWORD_GOLD: 112,
+  SWORD_DIAMOND: 113,
+  PICKAXE_STONE: 114,
+  PICKAXE_IRON: 115,
+  PICKAXE_DIAMOND: 116,
 };
 ITEM_INFO[ITEM.SWORD_WOOD]  = { name: 'Espada de Madeira', icon: '🗡️', stack: 1,  block: null, tool: 'sword', damage: 4 };
 ITEM_INFO[ITEM.RAW_BEEF]    = { name: 'Carne Crua',        icon: '🥩', stack: 16, block: null };
@@ -721,6 +752,20 @@ ITEM_INFO[ITEM.STICK]       = { name: 'Bastão',            icon: '🥢', stack:
 // Frutas — comer com [F] recupera vida (campo "food" = quantidade de HP curada)
 ITEM_INFO[ITEM.APPLE]       = { name: 'Maçã',              icon: '🍎', stack: 16, block: null, food: 4 };
 ITEM_INFO[ITEM.MELON]       = { name: 'Melancia',          icon: '🍉', stack: 16, block: null, food: 7 };
+// Recursos minerados
+ITEM_INFO[ITEM.COAL]        = { name: 'Carvão',            icon: '⚫', stack: 64, block: null };
+ITEM_INFO[ITEM.IRON_INGOT]  = { name: 'Barra de Ferro',   icon: '🔩', stack: 64, block: null };
+ITEM_INFO[ITEM.GOLD_INGOT]  = { name: 'Barra de Ouro',    icon: '🟨', stack: 64, block: null };
+ITEM_INFO[ITEM.DIAMOND]     = { name: 'Diamante',          icon: '💎', stack: 64, block: null };
+ITEM_INFO[ITEM.EMERALD]     = { name: 'Esmeralda',         icon: '💚', stack: 64, block: null };
+// Espadas de minérios
+ITEM_INFO[ITEM.SWORD_IRON]    = { name: 'Espada de Ferro',    icon: '⚔️', stack: 1, block: null, tool: 'sword', damage: 8 };
+ITEM_INFO[ITEM.SWORD_GOLD]    = { name: 'Espada de Ouro',     icon: '🗡️', stack: 1, block: null, tool: 'sword', damage: 7 };
+ITEM_INFO[ITEM.SWORD_DIAMOND] = { name: 'Espada de Diamante', icon: '⚔️', stack: 1, block: null, tool: 'sword', damage: 12 };
+// Picaretas (minam mais rápido)
+ITEM_INFO[ITEM.PICKAXE_STONE]   = { name: 'Picareta de Pedra',    icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 1.5 };
+ITEM_INFO[ITEM.PICKAXE_IRON]    = { name: 'Picareta de Ferro',    icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 2.0 };
+ITEM_INFO[ITEM.PICKAXE_DIAMOND] = { name: 'Picareta de Diamante', icon: '⛏️', stack: 1, block: null, tool: 'pickaxe', mineSpeed: 3.0 };
 
 // ============================================================
 //  CRAFTING
@@ -728,10 +773,21 @@ ITEM_INFO[ITEM.MELON]       = { name: 'Melancia',          icon: '🍉', stack: 
 // Cada receita consome `inputs` (lista de {id, count}) e produz `output`.
 // Sem grade/posicionamento — só precisa ter os materiais no inventário.
 const RECIPES = [
+  // Básico
   { id: 'planks',      inputs: [{ id: BLOCK.WOOD, count: 1 }],                                output: { id: BLOCK.PLANKS,      count: 4 } },
   { id: 'sticks',      inputs: [{ id: BLOCK.PLANKS, count: 2 }],                              output: { id: ITEM.STICK,        count: 4 } },
-  { id: 'sword_wood',  inputs: [{ id: BLOCK.PLANKS, count: 2 }, { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_WOOD,  count: 1 } },
-  { id: 'sword_stone', inputs: [{ id: BLOCK.STONE, count: 2 },  { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_STONE, count: 1 } },
+
+  // Espadas
+  { id: 'sword_wood',    inputs: [{ id: BLOCK.PLANKS, count: 2 }, { id: ITEM.STICK, count: 1 }],   output: { id: ITEM.SWORD_WOOD,    count: 1 } },
+  { id: 'sword_stone',   inputs: [{ id: BLOCK.STONE, count: 2 },  { id: ITEM.STICK, count: 1 }],   output: { id: ITEM.SWORD_STONE,   count: 1 } },
+  { id: 'sword_iron',    inputs: [{ id: ITEM.IRON_INGOT, count: 2 }, { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_IRON,    count: 1 } },
+  { id: 'sword_gold',    inputs: [{ id: ITEM.GOLD_INGOT, count: 2 }, { id: ITEM.STICK, count: 1 }], output: { id: ITEM.SWORD_GOLD,    count: 1 } },
+  { id: 'sword_diamond', inputs: [{ id: ITEM.DIAMOND, count: 2 }, { id: ITEM.STICK, count: 1 }],    output: { id: ITEM.SWORD_DIAMOND, count: 1 } },
+
+  // Picaretas
+  { id: 'pickaxe_stone',   inputs: [{ id: BLOCK.STONE, count: 3 },      { id: ITEM.STICK, count: 2 }], output: { id: ITEM.PICKAXE_STONE,   count: 1 } },
+  { id: 'pickaxe_iron',    inputs: [{ id: ITEM.IRON_INGOT, count: 3 }, { id: ITEM.STICK, count: 2 }], output: { id: ITEM.PICKAXE_IRON,    count: 1 } },
+  { id: 'pickaxe_diamond', inputs: [{ id: ITEM.DIAMOND, count: 3 },     { id: ITEM.STICK, count: 2 }], output: { id: ITEM.PICKAXE_DIAMOND, count: 1 } },
 ];
 
 function countItem(itemId) {
@@ -1114,6 +1170,32 @@ function generateChunkData(cx, cz) {
           block = BLOCK.STONE;
         } else if (ly < surfaceH - 3) {
           block = BLOCK.STONE;
+
+          // MINÉRIOS - aparecem APENAS em pedra, em diferentes profundidades
+          // Usa noise 3D (x,y,z) para distribuição natural em veios
+          const oreNoise = noise.noise2d(wx * 0.1 + ly * 0.3, wz * 0.1 + ly * 0.3);
+
+          // Diamante - MUITO RARO, só embaixo (y < 12)
+          if (ly < 12 && oreNoise > 0.92) {
+            block = BLOCK.DIAMOND_ORE;
+          }
+          // Esmeralda - SUPER RARO, só em montanhas (bioma montanha + y > 30)
+          else if (biome === 'montanha' && ly > 30 && ly < 50 && oreNoise > 0.94) {
+            block = BLOCK.EMERALD_ORE;
+          }
+          // Ouro - RARO, profundo (y < 24)
+          else if (ly < 24 && oreNoise > 0.84) {
+            block = BLOCK.GOLD_ORE;
+          }
+          // Ferro - MÉDIO, altura média (y < 40)
+          else if (ly < 40 && oreNoise > 0.75) {
+            block = BLOCK.IRON_ORE;
+          }
+          // Carvão - COMUM, qualquer profundidade em pedra
+          else if (ly < surfaceH - 4 && oreNoise > 0.65) {
+            block = BLOCK.COAL_ORE;
+          }
+
         } else if (ly < surfaceH) {
           block = (isRiver || biome === 'deserto') ? BLOCK.SAND : BLOCK.DIRT;
         } else if (ly === surfaceH) {
@@ -2895,7 +2977,22 @@ function setupInput() {
         // Break block — collect it into the inventory
         const broken = getWorldBlock(result.bx, result.by, result.bz);
         setBlock(result.bx, result.by, result.bz, BLOCK.AIR);
-        if (ITEM_INFO[broken]) addItemToInventory(broken, 1);
+
+        // Minérios dropam recursos refinados ao invés do bloco
+        if (broken === BLOCK.COAL_ORE) {
+          addItemToInventory(ITEM.COAL, 1);
+        } else if (broken === BLOCK.IRON_ORE) {
+          addItemToInventory(ITEM.IRON_INGOT, 1);
+        } else if (broken === BLOCK.GOLD_ORE) {
+          addItemToInventory(ITEM.GOLD_INGOT, 1);
+        } else if (broken === BLOCK.DIAMOND_ORE) {
+          addItemToInventory(ITEM.DIAMOND, 1);
+        } else if (broken === BLOCK.EMERALD_ORE) {
+          addItemToInventory(ITEM.EMERALD, 1);
+        } else if (ITEM_INFO[broken]) {
+          addItemToInventory(broken, 1);
+        }
+
         // Folhagem às vezes solta frutas — fonte de comida pra recuperar vida
         if (broken === BLOCK.LEAVES) {
           const fruitRoll = Math.random();
@@ -3249,7 +3346,24 @@ function update(dt) {
     }
   } else if (r.hit) {
     const bt = getWorldBlock(r.bx, r.by, r.bz);
-    const names = {[BLOCK.GRASS]:'Grama',[BLOCK.DIRT]:'Terra',[BLOCK.STONE]:'Pedra',[BLOCK.SAND]:'Areia',[BLOCK.WOOD]:'Madeira',[BLOCK.LEAVES]:'Folhas',[BLOCK.SNOW]:'Neve',[BLOCK.PLANKS]:'Tábuas',[BLOCK.WATER]:'Água',[BLOCK.BRICK_RED]:'Tijolo Vermelho',[BLOCK.ROOF_DARK]:'Telha Escura'};
+    const names = {
+      [BLOCK.GRASS]:'Grama',
+      [BLOCK.DIRT]:'Terra',
+      [BLOCK.STONE]:'Pedra',
+      [BLOCK.SAND]:'Areia',
+      [BLOCK.WOOD]:'Madeira',
+      [BLOCK.LEAVES]:'Folhas',
+      [BLOCK.SNOW]:'Neve',
+      [BLOCK.PLANKS]:'Tábuas',
+      [BLOCK.WATER]:'Água',
+      [BLOCK.BRICK_RED]:'Tijolo Vermelho',
+      [BLOCK.ROOF_DARK]:'Telha Escura',
+      [BLOCK.COAL_ORE]:'⚫ Carvão Minério',
+      [BLOCK.IRON_ORE]:'🔩 Ferro Minério',
+      [BLOCK.GOLD_ORE]:'🟨 Ouro Minério',
+      [BLOCK.DIAMOND_ORE]:'💎 Diamante Minério',
+      [BLOCK.EMERALD_ORE]:'💚 Esmeralda Minério'
+    };
     document.getElementById('target-block').textContent = names[bt] || '?';
   } else {
     document.getElementById('target-block').textContent = '---';
