@@ -1770,16 +1770,8 @@ function init() {
   updateHealthHUD();
   window.addEventListener('resize', onResize);
 
-  // Reset do clock quando volta de minimizado
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      // Quando volta, reseta o clock COMPLETAMENTE
-      clock = new THREE.Clock();
-      clock.start();
-    }
-  });
-
   updateCamera();
+  clock.start();
   animate();
 }
 
@@ -1804,13 +1796,37 @@ function updateHUD(dt) {
     else tb.textContent = '---';
   }
 }
+let animationId = null;
+let wasHidden = false;
+
 function animate() {
-  requestAnimationFrame(animate);
+  animationId = requestAnimationFrame(animate);
 
-  // Se página está escondida, para TUDO
-  if (document.hidden) return;
+  // Para COMPLETAMENTE quando escondido
+  if (document.hidden) {
+    if (!wasHidden) {
+      clock.stop();
+      wasHidden = true;
+    }
+    return;
+  }
 
-  const dt = Math.min(clock.getDelta(), 0.05);
+  // Reinicia clock quando volta
+  if (wasHidden) {
+    clock = new THREE.Clock();
+    clock.start();
+    wasHidden = false;
+    return; // pula primeiro frame
+  }
+
+  // Delta time MUITO limitado (16ms = 60fps)
+  const dt = Math.min(clock.getDelta(), 0.016);
+
+  // Safety: reseta velocidades absurdas
+  if (Math.abs(player.vel.x) > 100) player.vel.x = 0;
+  if (Math.abs(player.vel.y) > 100) player.vel.y = 0;
+  if (Math.abs(player.vel.z) > 100) player.vel.z = 0;
+
   if (pointerLocked) updatePlayer(dt); else updateCamera();
   updateSky(dt); updateClouds(dt); updateChunks();
   updateMobs(dt); updateDroppedItems(dt); updateRadios(dt); updateHand(dt); updatePlayerModel(dt);
