@@ -1799,6 +1799,13 @@ function updateHUD(dt) {
 }
 function animate() {
   requestAnimationFrame(animate);
+
+  // Pausa renderização se página está escondida (minimizada)
+  if (document.hidden) {
+    clock.getDelta(); // descarta tempo acumulado
+    return;
+  }
+
   const dt = Math.min(clock.getDelta(), 0.05);
   if (pointerLocked) updatePlayer(dt); else updateCamera();
   updateSky(dt); updateClouds(dt); updateChunks();
