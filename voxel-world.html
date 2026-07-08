@@ -602,8 +602,6 @@ let noise, SEED, clock;
 let worldTime = 0;
 let worldDayFactor = 1;
 let bloomEnabled = true;
-let gamePaused = false;
-let lastVisibleTime = 0;
 
 function setupPostProcessing() {
   composer = new THREE.EffectComposer(renderer);
@@ -1772,43 +1770,13 @@ function init() {
   updateHealthHUD();
   window.addEventListener('resize', onResize);
 
-  // Tratamento robusto de visibilidade
+  // Reset do clock quando volta de minimizado
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      // Pausa quando minimiza
-      gamePaused = true;
-      lastVisibleTime = performance.now();
-      // Pausa todos os áudios de rádio
-      radios.forEach(radio => {
-        if (radio.audio && radio.playing) {
-          radio.audio.pause();
-        }
-      });
-      console.log('[DEBUG] Jogo pausado - página escondida');
-    } else {
-      // Retoma quando volta
-      const hiddenTime = performance.now() - lastVisibleTime;
-      console.log('[DEBUG] Jogo retomando - ficou escondido por', (hiddenTime/1000).toFixed(1), 'segundos');
-      clock.getDelta(); // reset clock
-      gamePaused = false;
-      // Retoma áudios
-      radios.forEach(radio => {
-        if (radio.playing && radio.audio) {
-          radio.audio.play().catch(() => {});
-        }
-      });
+    if (!document.hidden) {
+      // Quando volta, reseta o clock COMPLETAMENTE
+      clock = new THREE.Clock();
+      clock.start();
     }
-  });
-
-  // Tratamento de WebGL context loss
-  renderer.domElement.addEventListener('webglcontextlost', (e) => {
-    e.preventDefault();
-    console.error('[ERROR] WebGL context perdido');
-    gamePaused = true;
-  });
-  renderer.domElement.addEventListener('webglcontextrestored', () => {
-    console.log('[INFO] WebGL context restaurado');
-    gamePaused = false;
   });
 
   updateCamera();
@@ -1839,34 +1807,16 @@ function updateHUD(dt) {
 function animate() {
   requestAnimationFrame(animate);
 
-  // Pausa renderização se página está escondida (minimizada)
-  if (document.hidden || gamePaused) {
-    clock.getDelta(); // descarta tempo acumulado
-    return;
-  }
+  // Se página está escondida, para TUDO
+  if (document.hidden) return;
 
-  // Previne delta time muito grande (limita a 16ms = ~60fps)
-  const rawDt = clock.getDelta();
-  const dt = Math.min(rawDt, 0.016);
-
-  // Se delta for muito grande, descarta completamente (página voltou de background)
-  if (rawDt > 0.5) {
-    console.log('[DEBUG] Delta time muito grande detectado:', rawDt, '- frame descartado');
-    return;
-  }
-
+  const dt = Math.min(clock.getDelta(), 0.05);
   if (pointerLocked) updatePlayer(dt); else updateCamera();
   updateSky(dt); updateClouds(dt); updateChunks();
   updateMobs(dt); updateDroppedItems(dt); updateRadios(dt); updateHand(dt); updatePlayerModel(dt);
   updateHUD(dt);
   bloomPass.enabled = bloomEnabled;
-
-  try {
-    composer.render();
-  } catch (e) {
-    console.error('[ERROR] Render error:', e);
-    gamePaused = true;
-  }
+  composer.render();
 }
 
 window.addEventListener('load', init);
