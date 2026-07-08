@@ -1769,6 +1769,9 @@ function init() {
   addItemToInventory(ITEM.SWORD_WOOD, 1); addItemToInventory(ITEM.APPLE, 2); addItemToInventory(BLOCK.DIRT, 16);
   updateHealthHUD();
   window.addEventListener('resize', onResize);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) clock.getDelta(); // reset clock quando volta do background
+  });
   updateCamera();
   animate();
 }
